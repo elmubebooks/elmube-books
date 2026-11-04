@@ -30,6 +30,7 @@ import {
   DownloadCloud,
   Send,
   MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,6 +236,7 @@ export default function Home() {
   const [commentName, setCommentName] = useState("");
   const [commentText, setCommentText] = useState("");
   const [commentSending, setCommentSending] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -1016,59 +1018,84 @@ export default function Home() {
             </Button>
           </div>
 
-          {/* Sección Comentarios */}
-          <div className="mb-6 p-6 rounded-xl border border-border bg-card">
-            <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              <h3 className="font-serif text-xl font-bold">Comentarios y sugerencias</h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              ¿Tienes alguna idea, sugerencia o comentario? ¡Escríbenos! Tu mensaje
-              se enviará a <strong>elmubebooks@gmail.com</strong>.
-            </p>
-            <form onSubmit={sendComment} className="space-y-3">
-              <div>
-                <Label htmlFor="comment-name" className="text-xs mb-1 block">
-                  Tu nombre (opcional)
-                </Label>
-                <Input
-                  id="comment-name"
-                  value={commentName}
-                  onChange={(e) => setCommentName(e.target.value)}
-                  placeholder="Anónimo"
-                  className="h-9"
-                  maxLength={80}
-                />
+          {/* Sección Comentarios (colapsable) */}
+          <div className="mb-6 rounded-xl border border-border bg-card overflow-hidden">
+            <button
+              onClick={() => setShowComments((v) => !v)}
+              className="w-full p-4 sm:p-5 flex items-center justify-between gap-3 hover:bg-secondary/40 transition-colors text-left"
+              aria-expanded={showComments}
+              aria-controls="comments-form"
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <MessageSquare className="w-5 h-5 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-serif text-base sm:text-lg font-bold leading-tight">
+                    Comentarios y sugerencias
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    {showComments
+                      ? "Toca para cerrar"
+                      : "¿Tienes una idea o comentario? Toca para escribirnos"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="comment-text" className="text-xs mb-1 block">
-                  Tu comentario <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="comment-text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Escribe aquí tu mensaje, sugerencia o idea para mejorar ELMUBE BOOKS…"
-                  rows={4}
-                  maxLength={1000}
-                  required
-                />
-                <p className="text-[10px] text-muted-foreground mt-1 text-right">
-                  {commentText.length}/1000
+              <ChevronDown
+                className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${
+                  showComments ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {showComments && (
+              <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-border">
+                <p className="text-sm text-muted-foreground mb-4 mt-3">
+                  Tu mensaje se enviará a <strong>elmubebooks@gmail.com</strong>.
                 </p>
+                <form onSubmit={sendComment} className="space-y-3">
+                  <div>
+                    <Label htmlFor="comment-name" className="text-xs mb-1 block">
+                      Tu nombre (opcional)
+                    </Label>
+                    <Input
+                      id="comment-name"
+                      value={commentName}
+                      onChange={(e) => setCommentName(e.target.value)}
+                      placeholder="Anónimo"
+                      className="h-9"
+                      maxLength={80}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="comment-text" className="text-xs mb-1 block">
+                      Tu comentario <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="comment-text"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Escribe aquí tu mensaje, sugerencia o idea para mejorar ELMUBE BOOKS…"
+                      rows={4}
+                      maxLength={1000}
+                      required
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                      {commentText.length}/1000
+                    </p>
+                  </div>
+                  <Button type="submit" disabled={commentSending} className="w-full sm:w-auto">
+                    {commentSending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    {commentSending ? "Abriendo correo…" : "Enviar comentario"}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    💡 Se abrirá tu app de correo con el mensaje precargado. Solo presiona enviar.
+                  </p>
+                </form>
               </div>
-              <Button type="submit" disabled={commentSending} className="w-full sm:w-auto">
-                {commentSending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 mr-2" />
-                )}
-                {commentSending ? "Abriendo correo…" : "Enviar comentario"}
-              </Button>
-              <p className="text-[10px] text-muted-foreground mt-2">
-                💡 Se abrirá tu app de correo con el mensaje precargado. Solo presiona enviar.
-              </p>
-            </form>
+            )}
           </div>
 
           {/* Texto legal */}
