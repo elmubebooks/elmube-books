@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export type BookSource = "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource";
+
 export interface Book {
   id: string;
   title: string;
@@ -9,7 +11,7 @@ export interface Book {
   subjects?: string[];
   cover?: string | null;
   description?: string | null;
-  source: "gutenberg" | "openlibrary" | "standardebooks";
+  source: BookSource;
   downloads: { label: string; url: string }[];
   previewUrl?: string | null;
 }
@@ -315,6 +317,165 @@ async function searchStandardEbooks(
   }
 }
 
+/* ================= Internet Archive (colección Gutenberg + opensource) ================= */
+async function searchArchive(query: string, page: number, limit: number, language?: string) {
+  try {
+    // Usamos la advancedsearch de Internet Archive
+    // Buscamos en mediatype:texts y collection:gutenberg (libros de dominio público)
+    const start = (Math.max(1, page) - 1) * limit;
+    let q = `mediatype:texts AND collection:(gutenberg OR opensource OR americana) AND (${query})`;
+    if (language && LANG_MAP[language]) {
+      // Internet Archive usa códigos de 3 letras
+      const langMap: Record<string, string> = {
+        es: "spa OR spanish OR español",
+        en: "eng OR english",
+        fr: "fre OR french OR français",
+        de: "ger OR german OR deutsch",
+        it: "ita OR italian",
+        pt: "por OR portuguese",
+      };
+      if (langMap[language]) q += ` AND language:(${langMap[language]})`;
+    }
+
+    const params = new URLSearchParams({
+      q,
+      "fl[]": "identifier,title,creator,year,language,description,collection",
+      rows: String(limit),
+      start: String(start),
+      output: "json",
+    });
+    const url = `https://archive.org/advancedsearch.php?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "ELMUBEBOOKS/1.0" },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const docs = data?.response?.docs || [];
+    if (docs.length === 0) return [];
+
+    // Para cada libro, obtener metadata completa (para archivos descargables)
+    const results: Book[] = [];
+    await Promise.all(
+      docs.slice(0, limit).map(async (doc: any) => {
+        try {
+          const id = doc.identifier;
+          const metaRes = await fetch(`https://archive.org/metadata/${id}`, {
+            headers: { "User-Agent": "ELMUBEBOOKS/1.0" },
+            next: { revalidate: 300 },
+          });
+          if (!metaRes.ok) return;
+          const meta = await metaRes.json();
+          const m = meta.metadata || {};
+          const server = meta.server || "ia800001.us.archive.org";
+          const dir = meta.dir || `/30/items/${id}`;
+
+          // Construir URLs de descarga
+          const downloads: { label: string; url: string }[] = [];
+          for (const f of meta.files || []) {
+            const name = f.name || "";
+            const fmt = (f.format || "").toLowerCase();
+            const url = `https://${server}${dir}/${name}`;
+            if (fmt.includes("pdf") && !downloads.some((d) => d.label === "PDF"))
+              downloads.push({ label: "PDF", url });
+            else if ((fmt.includes("epub") || name.endsWith(".epub")) && !downloads.some((d) => d.label === "EPUB"))
+              downloads.push({ label: "EPUB", url });
+            else if ((fmt.includes("mobi") || fmt.includes("kindle")) && !downloads.some((d) => d.label === "Kindle"))
+              downloads.push({ label: "Kindle", url });
+            else if (fmt.includes("text") && name.includes("_djvu.txt"))
+              downloads.push({ label: "TXT", url });
+            else if (fmt.includes("html") || name.endsWith(".htm") || name.endsWith(".html"))
+              downloads.push({ label: "HTML", url });
+          }
+          // Siempre ofrecer "Leer en línea" (BookReader)
+          downloads.push({ label: "Leer online", url: `https://archive.org/details/${id}` });
+
+          // Preview: TXT si existe
+          const txtFile = (meta.files || []).find((f: any) =>
+            (f.format || "").toLowerCase().includes("text") && (f.name || "").includes("_djvu.txt")
+          );
+          const previewUrl = txtFile
+            ? `https://${server}${dir}/${txtFile.name}`
+            : null;
+
+          results.push({
+            id: `archive-${id}`,
+            title: m.title || doc.title || "Sin título",
+            author: Array.isArray(m.creator) ? m.creator.join(", ") : m.creator || "Autor desconocido",
+            year: m.year ? parseInt(String(m.year).slice(0, 4), 10) || null : null,
+            language: Array.isArray(m.language) ? m.language[0] : m.language || null,
+            subjects: Array.isArray(m.collection) ? m.collection.slice(0, 4) : [],
+            cover: `https://archive.org/services/img/${id}`,
+            description: Array.isArray(m.description) ? m.description[0]?.slice(0, 400) : (m.description || null),
+            source: "archive",
+            downloads,
+            previewUrl,
+          });
+        } catch {}
+      })
+    );
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/* ================= Wikisource (obra en texto libre) ================= */
+async function searchWikisource(query: string, page: number, limit: number, language?: string) {
+  try {
+    // Wikisource tiene APIs por idioma. Usamos es.wikisource.org si español, en.wikisource.org en otro caso
+    const langCode = language === "es" ? "es" : "en";
+    const baseUrl = `https://${langCode}.wikisource.org`;
+    const params = new URLSearchParams({
+      action: "query",
+      list: "search",
+      srsearch: query,
+      srlimit: String(limit),
+      srnamespace: "0|102|106", // 0=Main, 102=Author, 106=Index (en); es usa mismos
+      format: "json",
+      origin: "*",
+    });
+    const url = `${baseUrl}/w/api.php?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "ELMUBEBOOKS/1.0 (contacto: elmubebooks@gmail.com)",
+      },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const search = data?.query?.search || [];
+    const start = (Math.max(1, page) - 1) * limit;
+    const results: Book[] = search.slice(start, start + limit).map((item: any) => {
+      const title = item.title.replace(/^Autor:/, "").replace(/^Index:/, "");
+      const pageUrl = `${baseUrl}/wiki/${encodeURIComponent(item.title.replace(/ /g, "_"))}`;
+      // Limpiar snippet de HTML
+      const snippet = (item.snippet || "").replace(/<[^>]+>/g, "").slice(0, 300);
+      return {
+        id: `wikisource-${langCode}-${item.pageid}`,
+        title,
+        author: "Wikisource",
+        year: null,
+        language: langCode,
+        subjects: ["Wikisource", "Texto libre"],
+        cover: null,
+        description: snippet || null,
+        source: "wikisource",
+        downloads: [
+          { label: "Leer online", url: pageUrl },
+          { label: "HTML", url: `${pageUrl}?action=raw` },
+          { label: "EPUB", url: `${baseUrl}/w/index.php?title=Special:ElectronPdf&page=${encodeURIComponent(item.title)}&action=show-download-screen` },
+        ],
+        previewUrl: null,
+      };
+    });
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim();
@@ -338,6 +499,10 @@ export async function GET(req: NextRequest) {
     tasks.push(searchOpenLibrary(query, page, limit, language || undefined, topic));
   if (source === "all" || source === "standardebooks")
     tasks.push(searchStandardEbooks(query, page, limit, topic));
+  if (source === "all" || source === "archive")
+    tasks.push(searchArchive(query, page, limit, language || undefined));
+  if (source === "all" || source === "wikisource")
+    tasks.push(searchWikisource(query, page, limit, language || undefined));
 
   const settled = await Promise.allSettled(tasks);
   let books: Book[] = [];

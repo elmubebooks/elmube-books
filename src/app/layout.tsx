@@ -31,14 +31,32 @@ export const metadata: Metadata = {
     "dominio público",
   ],
   authors: [{ name: "ELMUBE BOOKS" }],
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ELMUBE BOOKS",
   },
   openGraph: {
     title: "ELMUBE BOOKS",
     description: "Buscar y descargar libros libres de dominio público",
     type: "website",
   },
+};
+
+export const viewport = {
+  themeColor: "#6b4423",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

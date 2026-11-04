@@ -27,9 +27,14 @@ import {
   Copy,
   Check,
   QrCode,
+  DownloadCloud,
+  Send,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -68,7 +73,7 @@ interface Book {
   subjects?: string[];
   cover?: string | null;
   description?: string | null;
-  source: "gutenberg" | "openlibrary" | "standardebooks";
+  source: "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource";
   downloads: { label: string; url: string }[];
   previewUrl?: string | null;
 }
@@ -120,12 +125,24 @@ const SOURCE_LABEL: Record<Book["source"], string> = {
   gutenberg: "Project Gutenberg",
   openlibrary: "Open Library",
   standardebooks: "Standard Ebooks",
+  archive: "Internet Archive",
+  wikisource: "Wikisource",
 };
 
 const SOURCE_BADGE: Record<Book["source"], string> = {
   gutenberg: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200",
   openlibrary: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200",
   standardebooks: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-900/30 dark:text-rose-200",
+  archive: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200",
+  wikisource: "bg-violet-100 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-200",
+};
+
+const SOURCE_SHORT: Record<Book["source"], string> = {
+  gutenberg: "PG",
+  openlibrary: "OL",
+  standardebooks: "SE",
+  archive: "IA",
+  wikisource: "WS",
 };
 
 const LANG_LABEL: Record<string, string> = {
@@ -150,7 +167,7 @@ const LANG_LABEL: Record<string, string> = {
 };
 
 const LANGUAGES = [
-  { value: "all", label: "Todos los idiomas" },
+  { value: "all", label: "Todos" },
   { value: "es", label: "Español" },
   { value: "en", label: "Inglés" },
   { value: "fr", label: "Francés" },
@@ -197,7 +214,7 @@ export default function Home() {
   const [activeQuery, setActiveQuery] = useState("");
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
-  const [source, setSource] = useState<"all" | "gutenberg" | "openlibrary" | "standardebooks">("all");
+  const [source, setSource] = useState<"all" | "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource">("all");
   const [language, setLanguage] = useState<string>("all");
   const [category, setCategory] = useState<string>("");
   const [selected, setSelected] = useState<Book | null>(null);
@@ -213,6 +230,66 @@ export default function Home() {
   const [likeCount, setLikeCount] = useState<number>(0);
   const [showDonativo, setShowDonativo] = useState(false);
   const [copiedClabe, setCopiedClabe] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [commentName, setCommentName] = useState("");
+  const [commentText, setCommentText] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
+
+  /* ----- PWA: detectar posibilidad de instalación ----- */
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPromptEvent(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    const installedHandler = () => {
+      setIsInstalled(true);
+      setInstallPromptEvent(null);
+    };
+    window.addEventListener("appinstalled", installedHandler);
+
+    // Verificar si ya está instalada (standalone)
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPromptEvent) return;
+    installPromptEvent.prompt();
+    const { outcome } = await installPromptEvent.userChoice;
+    if (outcome === "accepted") {
+      toast({ title: "¡App instalada!", description: "Encuéntrala en tu pantalla de inicio" });
+    }
+    setInstallPromptEvent(null);
+  };
+
+  /* ----- Enviar comentario por correo ----- */
+  const sendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) {
+      toast({ title: "Escribe tu comentario", variant: "destructive" });
+      return;
+    }
+    setCommentSending(true);
+    const subject = `Comentario de ${commentName || "un lector"} - ELMUBE BOOKS`;
+    const body = `Nombre: ${commentName || "Anónimo"}\n\nComentario:\n${commentText}\n\n---\nEnviado desde elmubebooks.netlify.app`;
+    const mailto = `mailto:elmubebooks@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+    setTimeout(() => {
+      setCommentSending(false);
+      setCommentName("");
+      setCommentText("");
+      toast({ title: "Abriendo tu correo…", description: "Completa el envío desde tu app de correo" });
+    }, 500);
+  };
 
   /* ----- Me gusta (likes) ----- */
   useEffect(() => {
@@ -555,6 +632,17 @@ export default function Home() {
               badge={likeCount > 0 ? (likeCount > 99 ? "99+" : likeCount) : undefined}
               onClick={toggleLike}
             />
+            {installPromptEvent && !isInstalled && (
+              <button
+                onClick={handleInstallClick}
+                className="flex flex-col items-center justify-center gap-0.5 px-3 h-12 rounded-md bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
+                title="Instalar app en tu dispositivo"
+                aria-label="Instalar app"
+              >
+                <DownloadCloud className="w-5 h-5" />
+                <span className="text-[9px] leading-none font-semibold hidden sm:block">Instalar</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -641,20 +729,32 @@ export default function Home() {
               </span>
             )}
           </button>
+          {installPromptEvent && !isInstalled && (
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-semibold"
+              aria-label="Instalar app"
+            >
+              <DownloadCloud className="w-4 h-4" />
+              <span>Instalar</span>
+            </button>
+          )}
         </div>
 
         {/* Filtros por fuente (solo en resultados) */}
         {view === "results" && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground mr-1">Fuentes:</span>
+              <Filter className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs text-muted-foreground mr-1 flex-shrink-0">Fuentes:</span>
               <Tabs value={source} onValueChange={onSourceChange}>
-                <TabsList className="h-8">
+                <TabsList className="h-8 flex flex-wrap">
                   <TabsTrigger value="all" className="text-xs h-7 px-3">Todas</TabsTrigger>
                   <TabsTrigger value="gutenberg" className="text-xs h-7 px-3">Gutenberg</TabsTrigger>
                   <TabsTrigger value="openlibrary" className="text-xs h-7 px-3">Open Library</TabsTrigger>
-                  <TabsTrigger value="standardebooks" className="text-xs h-7 px-3">Standard Ebooks</TabsTrigger>
+                  <TabsTrigger value="standardebooks" className="text-xs h-7 px-3">Standard</TabsTrigger>
+                  <TabsTrigger value="archive" className="text-xs h-7 px-3">Archive</TabsTrigger>
+                  <TabsTrigger value="wikisource" className="text-xs h-7 px-3">Wikisource</TabsTrigger>
                 </TabsList>
               </Tabs>
               {language !== "all" && (
@@ -914,6 +1014,61 @@ export default function Home() {
               <Gift className="w-4 h-4 mr-2" />
               Hacer un donativo
             </Button>
+          </div>
+
+          {/* Sección Comentarios */}
+          <div className="mb-6 p-6 rounded-xl border border-border bg-card">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <h3 className="font-serif text-xl font-bold">Comentarios y sugerencias</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              ¿Tienes alguna idea, sugerencia o comentario? ¡Escríbenos! Tu mensaje
+              se enviará a <strong>elmubebooks@gmail.com</strong>.
+            </p>
+            <form onSubmit={sendComment} className="space-y-3">
+              <div>
+                <Label htmlFor="comment-name" className="text-xs mb-1 block">
+                  Tu nombre (opcional)
+                </Label>
+                <Input
+                  id="comment-name"
+                  value={commentName}
+                  onChange={(e) => setCommentName(e.target.value)}
+                  placeholder="Anónimo"
+                  className="h-9"
+                  maxLength={80}
+                />
+              </div>
+              <div>
+                <Label htmlFor="comment-text" className="text-xs mb-1 block">
+                  Tu comentario <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="comment-text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Escribe aquí tu mensaje, sugerencia o idea para mejorar ELMUBE BOOKS…"
+                  rows={4}
+                  maxLength={1000}
+                  required
+                />
+                <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                  {commentText.length}/1000
+                </p>
+              </div>
+              <Button type="submit" disabled={commentSending} className="w-full sm:w-auto">
+                {commentSending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                {commentSending ? "Abriendo correo…" : "Enviar comentario"}
+              </Button>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                💡 Se abrirá tu app de correo con el mensaje precargado. Solo presiona enviar.
+              </p>
+            </form>
           </div>
 
           {/* Texto legal */}
@@ -1283,7 +1438,7 @@ function BookCard({
             variant="outline"
             className={`text-[9px] py-0 px-1.5 h-4 backdrop-blur-sm ${SOURCE_BADGE[book.source]}`}
           >
-            {book.source === "gutenberg" ? "PG" : book.source === "openlibrary" ? "OL" : "SE"}
+            {SOURCE_SHORT[book.source]}
           </Badge>
         </div>
 
