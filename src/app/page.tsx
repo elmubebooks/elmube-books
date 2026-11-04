@@ -80,6 +80,42 @@ interface DownloadEntry {
   timestamp: number;
 }
 
+/* Botón de icono con etiqueta de texto debajo (visible en desktop, oculto en móvil) */
+function IconButtonWithLabel({
+  icon,
+  label,
+  onClick,
+  active,
+  badge,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  badge?: string | number;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex flex-col items-center justify-center gap-0.5 px-2 h-12 min-w-11 rounded-md transition-colors hover:bg-secondary ${
+        active ? "bg-primary text-primary-foreground hover:bg-primary" : "text-foreground"
+      }`}
+      title={label}
+      aria-label={label}
+    >
+      <span className="relative">
+        {icon}
+        {badge !== undefined && (
+          <span className="absolute -top-1.5 -right-2 bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+            {badge}
+          </span>
+        )}
+      </span>
+      <span className="text-[9px] leading-none font-medium hidden sm:block">{label}</span>
+    </button>
+  );
+}
+
 const SOURCE_LABEL: Record<Book["source"], string> = {
   gutenberg: "Project Gutenberg",
   openlibrary: "Open Library",
@@ -312,21 +348,23 @@ export default function Home() {
         params.set("source", src);
         params.set("limit", "12");
         const res = await fetch(`/api/search?${params.toString()}`);
-        if (!res.ok) throw new Error("Error en la búsqueda");
+        if (!res.ok) {
+          throw new Error(`Servidor respondió ${res.status}`);
+        }
         const data = await res.json();
         setBooks(data.books || []);
         if ((data.books || []).length === 0) {
           toast({
             title: "Sin resultados",
             description: cat
-              ? `No se encontraron libros en esta categoría`
-              : `No se encontraron libros para "${q.trim()}"`,
+              ? `No se encontraron libros en "${CATEGORIES.find(c => c.value === cat)?.label || cat}"`
+              : `No se encontraron libros para "${q.trim()}". Prueba con otra palabra.`,
           });
         }
-      } catch (e) {
+      } catch (e: any) {
         toast({
           title: "Error de búsqueda",
-          description: "Revisa tu conexión e inténtalo de nuevo.",
+          description: `No se pudo completar la búsqueda. ${e?.message || ""}. Verifica tu conexión e inténtalo de nuevo.`,
           variant: "destructive",
         });
       } finally {
@@ -479,87 +517,42 @@ export default function Home() {
           </form>
 
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant={view === "categories" ? "default" : "ghost"}
-              size="icon"
+            <IconButtonWithLabel
+              icon={<Grid3x3 className="w-5 h-5" />}
+              label="Categorías"
+              active={view === "categories"}
               onClick={() => {
                 setView(view === "categories" ? "home" : "categories");
                 setActiveQuery("");
                 setCategory("");
               }}
-              className="h-10 w-10"
-              title="Categorías"
-              aria-label="Explorar categorías"
-            >
-              <Grid3x3 className="w-5 h-5" />
-            </Button>
-            <Button
-              variant={view === "history" ? "default" : "ghost"}
-              size="icon"
+            />
+            <IconButtonWithLabel
+              icon={<History className="w-5 h-5" />}
+              label="Historial"
+              active={view === "history"}
+              badge={history.length > 0 ? (history.length > 9 ? "9+" : history.length) : undefined}
               onClick={() => setView(view === "history" ? "home" : "history")}
-              className="relative h-10 w-10"
-              title="Historial"
-              aria-label="Ver historial de descargas"
-            >
-              <History className="w-5 h-5" />
-              {history.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {history.length > 9 ? "9+" : history.length}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant={view === "favorites" ? "default" : "ghost"}
-              size="icon"
+            />
+            <IconButtonWithLabel
+              icon={<Bookmark className="w-5 h-5" />}
+              label="Favoritos"
+              active={view === "favorites"}
+              badge={favorites.length > 0 ? (favorites.length > 9 ? "9+" : favorites.length) : undefined}
               onClick={() => setView(view === "favorites" ? "home" : "favorites")}
-              className="relative h-10 w-10"
-              title="Favoritos"
-              aria-label="Ver favoritos"
-            >
-              <Bookmark className="w-5 h-5" />
-              {favorites.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {favorites.length > 9 ? "9+" : favorites.length}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
+            />
+            <IconButtonWithLabel
+              icon={dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              label={dark ? "Claro" : "Oscuro"}
               onClick={toggleDark}
-              className="h-10 w-10"
-              title="Cambiar tema"
-              aria-label="Cambiar tema claro/oscuro"
-            >
-              {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </Button>
-            {/* Botón Me gusta */}
-            <Button
-              variant={liked ? "default" : "ghost"}
-              size="icon"
+            />
+            <IconButtonWithLabel
+              icon={<ThumbsUp className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />}
+              label="Me gusta"
+              active={liked}
+              badge={likeCount > 0 ? (likeCount > 99 ? "99+" : likeCount) : undefined}
               onClick={toggleLike}
-              className="relative h-10 w-10"
-              title={liked ? "Quitar me gusta" : "Me gusta esta app"}
-              aria-label="Me gusta"
-            >
-              <ThumbsUp className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
-              {likeCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-                  {likeCount > 99 ? "99+" : likeCount}
-                </span>
-              )}
-            </Button>
-            {/* Botón Donativo */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowDonativo(true)}
-              className="h-10 w-10"
-              title="Apóyanos con un donativo"
-              aria-label="Donativo"
-            >
-              <Gift className="w-5 h-5" />
-            </Button>
+            />
           </div>
         </div>
 
@@ -830,17 +823,40 @@ export default function Home() {
         </main>
       )}
 
-      {/* ===== Footer ===== */}
+      {/* ===== Footer con sección de donativo ===== */}
       <footer className="mt-auto border-t border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-muted-foreground space-y-2">
-          <p>
-            Todos los libros indexados son de dominio público o con permiso de descarga
-            gratuita, provenientes de Project Gutenberg, Open Library e Internet Archive,
-            y Standard Ebooks.
-          </p>
-          <p>
-            Hecho con cariño para los amantes de la lectura · {new Date().getFullYear()}
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Sección Donativo - grande y visible */}
+          <div className="mb-6 p-6 rounded-xl bg-gradient-to-br from-secondary/80 to-secondary/40 border border-border text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Gift className="w-6 h-6 text-accent" />
+              <h3 className="font-serif text-xl font-bold">Apoya ELMUBE BOOKS</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4 max-w-xl mx-auto">
+              Si esta app te ha sido útil, considera apoyarla con un donativo.
+              Cada peso ayuda a mantener el servidor y seguir mejorando.
+            </p>
+            <Button
+              onClick={() => setShowDonativo(true)}
+              size="lg"
+              className="font-semibold"
+            >
+              <Gift className="w-4 h-4 mr-2" />
+              Hacer un donativo
+            </Button>
+          </div>
+
+          {/* Texto legal */}
+          <div className="text-center text-xs text-muted-foreground space-y-2">
+            <p>
+              Todos los libros indexados son de dominio público o con permiso de descarga
+              gratuita, provenientes de Project Gutenberg, Open Library e Internet Archive,
+              y Standard Ebooks.
+            </p>
+            <p>
+              Hecho con cariño para los amantes de la lectura · {new Date().getFullYear()}
+            </p>
+          </div>
         </div>
       </footer>
 
