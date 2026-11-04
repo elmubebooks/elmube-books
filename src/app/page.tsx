@@ -1,0 +1,1222 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  BookOpen,
+  Download,
+  Heart,
+  X,
+  Loader2,
+  Library,
+  Sparkles,
+  Sun,
+  Moon,
+  Bookmark,
+  FileText,
+  BookMarked,
+  ExternalLink,
+  Filter,
+  History,
+  Eye,
+  Tag,
+  Globe,
+  Grid3x3,
+  ThumbsUp,
+  Gift,
+  Copy,
+  Check,
+  QrCode,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  year?: number | null;
+  language?: string;
+  subjects?: string[];
+  cover?: string | null;
+  description?: string | null;
+  source: "gutenberg" | "openlibrary" | "standardebooks";
+  downloads: { label: string; url: string }[];
+  previewUrl?: string | null;
+}
+
+interface DownloadEntry {
+  book: Book;
+  format: string;
+  url: string;
+  timestamp: number;
+}
+
+const SOURCE_LABEL: Record<Book["source"], string> = {
+  gutenberg: "Project Gutenberg",
+  openlibrary: "Open Library",
+  standardebooks: "Standard Ebooks",
+};
+
+const SOURCE_BADGE: Record<Book["source"], string> = {
+  gutenberg: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200",
+  openlibrary: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200",
+  standardebooks: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-900/30 dark:text-rose-200",
+};
+
+const LANG_LABEL: Record<string, string> = {
+  en: "Inglés",
+  es: "Español",
+  fr: "Francés",
+  de: "Alemán",
+  it: "Italiano",
+  pt: "Portugués",
+  la: "Latín",
+  el: "Griego",
+  ru: "Ruso",
+  zh: "Chino",
+  ja: "Japonés",
+  yid: "Yiddish",
+  spa: "Español",
+  eng: "Inglés",
+  fre: "Francés",
+  ger: "Alemán",
+  ita: "Italiano",
+  por: "Portugués",
+};
+
+const LANGUAGES = [
+  { value: "all", label: "Todos los idiomas" },
+  { value: "es", label: "Español" },
+  { value: "en", label: "Inglés" },
+  { value: "fr", label: "Francés" },
+  { value: "de", label: "Alemán" },
+  { value: "it", label: "Italiano" },
+  { value: "pt", label: "Portugués" },
+];
+
+const CATEGORIES = [
+  { value: "ficcion", label: "Ficción", icon: "📖" },
+  { value: "poesia", label: "Poesía", icon: "✒️" },
+  { value: "filosofia", label: "Filosofía", icon: "🧠" },
+  { value: "teatro", label: "Teatro", icon: "🎭" },
+  { value: "historia", label: "Historia", icon: "🏛️" },
+  { value: "ciencia", label: "Ciencia", icon: "🔬" },
+  { value: "aventuras", label: "Aventuras", icon: "🗺️" },
+  { value: "misterio", label: "Misterio", icon: "🔍" },
+  { value: "romance", label: "Romance", icon: "❤️" },
+  { value: "infantiles", label: "Infantil", icon: "🧸" },
+  { value: "religion", label: "Religión", icon: "🕊️" },
+  { value: "biografia", label: "Biografía", icon: "👤" },
+];
+
+const SUGGESTIONS = [
+  "Cervantes",
+  "Shakespeare",
+  "Austen",
+  "Dickens",
+  "Dostoievski",
+  "Verne",
+  "Poe",
+  "Wilde",
+  "Tolstoy",
+  "Hugo",
+  "Nietzsche",
+  "Mark Twain",
+];
+
+type View = "home" | "results" | "favorites" | "history" | "categories";
+
+export default function Home() {
+  const { toast } = useToast();
+  const [query, setQuery] = useState("");
+  const [activeQuery, setActiveQuery] = useState("");
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<"all" | "gutenberg" | "openlibrary" | "standardebooks">("all");
+  const [language, setLanguage] = useState<string>("all");
+  const [category, setCategory] = useState<string>("");
+  const [selected, setSelected] = useState<Book | null>(null);
+  const [favorites, setFavorites] = useState<Book[]>([]);
+  const [history, setHistory] = useState<DownloadEntry[]>([]);
+  const [view, setView] = useState<View>("home");
+  const [dark, setDark] = useState(false);
+  const [previewBook, setPreviewBook] = useState<Book | null>(null);
+  const [previewText, setPreviewText] = useState<string>("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string>("");
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const [showDonativo, setShowDonativo] = useState(false);
+  const [copiedClabe, setCopiedClabe] = useState(false);
+
+  /* ----- Me gusta (likes) ----- */
+  useEffect(() => {
+    try {
+      // ¿El usuario ya dio like?
+      const userLiked = localStorage.getItem("elmube-liked") === "true";
+      setLiked(userLiked);
+      // Contador global persistente (suma de todos los likes en este navegador)
+      const count = parseInt(localStorage.getItem("elmube-likes-count") || "0", 10);
+      setLikeCount(count);
+    } catch {}
+  }, []);
+
+  const toggleLike = () => {
+    const next = !liked;
+    setLiked(next);
+    const newCount = Math.max(0, likeCount + (next ? 1 : -1));
+    setLikeCount(newCount);
+    try {
+      localStorage.setItem("elmube-liked", String(next));
+      localStorage.setItem("elmube-likes-count", String(newCount));
+    } catch {}
+    toast({
+      title: next ? "¡Gracias por tu me gusta! ❤" : "Quitaste tu me gusta",
+      description: next ? "Nos alegra que disfrutes ELMUBE BOOKS" : undefined,
+    });
+  };
+
+  /* ----- Copiar CLABE ----- */
+  const copyClabe = async () => {
+    const clabe = "728969000071167065";
+    try {
+      await navigator.clipboard.writeText(clabe);
+      setCopiedClabe(true);
+      toast({ title: "CLABE copiada", description: clabe });
+      setTimeout(() => setCopiedClabe(false), 2000);
+    } catch {
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = clabe;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        setCopiedClabe(true);
+        toast({ title: "CLABE copiada", description: clabe });
+        setTimeout(() => setCopiedClabe(false), 2000);
+      } catch {
+        toast({ title: "No se pudo copiar", variant: "destructive" });
+      }
+      document.body.removeChild(ta);
+    }
+  };
+
+  /* ----- Tema oscuro ----- */
+  useEffect(() => {
+    const saved = localStorage.getItem("elmube-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = saved ? saved === "dark" : prefersDark;
+    setDark(isDark);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("elmube-theme", next ? "dark" : "light");
+  };
+
+  /* ----- Favoritos e Historial desde localStorage ----- */
+  useEffect(() => {
+    try {
+      const rawFav = localStorage.getItem("elmube-favoritos");
+      if (rawFav) setFavorites(JSON.parse(rawFav));
+      const rawHist = localStorage.getItem("elmube-historial");
+      if (rawHist) setHistory(JSON.parse(rawHist));
+    } catch {}
+  }, []);
+
+  const saveFavs = (f: Book[]) => {
+    setFavorites(f);
+    localStorage.setItem("elmube-favoritos", JSON.stringify(f));
+  };
+
+  const saveHistory = (h: DownloadEntry[]) => {
+    setHistory(h);
+    localStorage.setItem("elmube-historial", JSON.stringify(h));
+  };
+
+  const isFav = useCallback(
+    (id: string) => favorites.some((b) => b.id === id),
+    [favorites]
+  );
+
+  const toggleFav = (book: Book) => {
+    if (isFav(book.id)) {
+      saveFavs(favorites.filter((b) => b.id !== book.id));
+      toast({ title: "Quitado de favoritos", description: book.title });
+    } else {
+      saveFavs([book, ...favorites]);
+      toast({ title: "Añadido a favoritos", description: book.title });
+    }
+  };
+
+  const recordDownload = (book: Book, format: string, url: string) => {
+    const entry: DownloadEntry = { book, format, url, timestamp: Date.now() };
+    // Evitar duplicados exactos en los últimos 5
+    const filtered = history.filter(
+      (e) => !(e.book.id === book.id && e.format === format)
+    );
+    const next = [entry, ...filtered].slice(0, 50);
+    saveHistory(next);
+    toast({ title: "Descarga iniciada", description: `${book.title} · ${format}` });
+  };
+
+  const clearHistory = () => {
+    saveHistory([]);
+    toast({ title: "Historial borrado" });
+  };
+
+  /* ----- Búsqueda ----- */
+  const search = useCallback(
+    async (q: string, src: typeof source, lang: string, cat: string) => {
+      if (!q && !cat) return;
+      setLoading(true);
+      setBooks([]);
+      try {
+        const params = new URLSearchParams();
+        if (q) params.set("q", q.trim());
+        if (lang && lang !== "all") params.set("language", lang);
+        if (cat) params.set("category", cat);
+        params.set("source", src);
+        params.set("limit", "12");
+        const res = await fetch(`/api/search?${params.toString()}`);
+        if (!res.ok) throw new Error("Error en la búsqueda");
+        const data = await res.json();
+        setBooks(data.books || []);
+        if ((data.books || []).length === 0) {
+          toast({
+            title: "Sin resultados",
+            description: cat
+              ? `No se encontraron libros en esta categoría`
+              : `No se encontraron libros para "${q.trim()}"`,
+          });
+        }
+      } catch (e) {
+        toast({
+          title: "Error de búsqueda",
+          description: "Revisa tu conexión e inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setActiveQuery(query);
+    setCategory("");
+    setView("results");
+    search(query, source, language, "");
+  };
+
+  const onSuggestion = (s: string) => {
+    setQuery(s);
+    setActiveQuery(s);
+    setCategory("");
+    setView("results");
+    search(s, source, language, "");
+  };
+
+  const onSourceChange = (val: string) => {
+    const s = val as typeof source;
+    setSource(s);
+    if (activeQuery || category) search(activeQuery, s, language, category);
+  };
+
+  const onLanguageChange = (val: string) => {
+    setLanguage(val);
+    if (activeQuery || category) search(activeQuery, source, val, category);
+  };
+
+  const onCategoryClick = (cat: string) => {
+    setCategory(cat);
+    setActiveQuery("");
+    setQuery("");
+    setView("results");
+    search("", source, language, cat);
+  };
+
+  /* ----- Vista previa ----- */
+  const openPreview = async (book: Book) => {
+    setPreviewBook(book);
+    setPreviewText("");
+    setPreviewError("");
+    setPreviewLoading(true);
+    try {
+      if (!book.previewUrl) {
+        setPreviewError("Este libro no tiene vista previa en texto disponible.");
+        return;
+      }
+      const res = await fetch(`/api/preview?url=${encodeURIComponent(book.previewUrl)}`);
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPreviewText(data.excerpt || "");
+    } catch (e: any) {
+      setPreviewError(e?.message || "No se pudo cargar la vista previa");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  /* ----- Título de la vista actual ----- */
+  const getViewTitle = () => {
+    if (view === "favorites") return "Mis favoritos";
+    if (view === "history") return "Historial de descargas";
+    if (view === "results") {
+      if (category) {
+        const cat = CATEGORIES.find((c) => c.value === category);
+        return cat ? `${cat.icon} ${cat.label}` : "Resultados";
+      }
+      return `Resultados para “${activeQuery}”`;
+    }
+    return "";
+  };
+
+  const displayed =
+    view === "favorites"
+      ? favorites
+      : view === "history"
+      ? history.map((h) => h.book)
+      : books;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* ===== Header ===== */}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <button
+            onClick={() => {
+              setView("home");
+              setActiveQuery("");
+              setCategory("");
+              setQuery("");
+            }}
+            className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="hidden sm:block text-left">
+              <h1 className="font-serif text-lg font-semibold leading-none">
+                ELMUBE BOOKS
+              </h1>
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                Libros libres de dominio público
+              </p>
+            </div>
+          </button>
+
+          <form onSubmit={handleSubmit} className="flex-1 flex gap-2 max-w-2xl mx-auto">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por título, autor o tema…"
+                className="pl-9 pr-3 h-10 font-sans"
+                aria-label="Buscar libros"
+              />
+            </div>
+            {/* Selector de idioma */}
+            <div className="hidden sm:flex items-center">
+              <Select value={language} onValueChange={onLanguageChange}>
+                <SelectTrigger className="w-[140px] h-10">
+                  <Globe className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map((l) => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={loading} className="h-10 px-4">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              <span className="hidden sm:inline ml-1">Buscar</span>
+            </Button>
+          </form>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              variant={view === "categories" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => {
+                setView(view === "categories" ? "home" : "categories");
+                setActiveQuery("");
+                setCategory("");
+              }}
+              className="h-10 w-10"
+              title="Categorías"
+              aria-label="Explorar categorías"
+            >
+              <Grid3x3 className="w-5 h-5" />
+            </Button>
+            <Button
+              variant={view === "history" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setView(view === "history" ? "home" : "history")}
+              className="relative h-10 w-10"
+              title="Historial"
+              aria-label="Ver historial de descargas"
+            >
+              <History className="w-5 h-5" />
+              {history.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {history.length > 9 ? "9+" : history.length}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant={view === "favorites" ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setView(view === "favorites" ? "home" : "favorites")}
+              className="relative h-10 w-10"
+              title="Favoritos"
+              aria-label="Ver favoritos"
+            >
+              <Bookmark className="w-5 h-5" />
+              {favorites.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {favorites.length > 9 ? "9+" : favorites.length}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDark}
+              className="h-10 w-10"
+              title="Cambiar tema"
+              aria-label="Cambiar tema claro/oscuro"
+            >
+              {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+            {/* Botón Me gusta */}
+            <Button
+              variant={liked ? "default" : "ghost"}
+              size="icon"
+              onClick={toggleLike}
+              className="relative h-10 w-10"
+              title={liked ? "Quitar me gusta" : "Me gusta esta app"}
+              aria-label="Me gusta"
+            >
+              <ThumbsUp className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
+              {likeCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+                  {likeCount > 99 ? "99+" : likeCount}
+                </span>
+              )}
+            </Button>
+            {/* Botón Donativo */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDonativo(true)}
+              className="h-10 w-10"
+              title="Apóyanos con un donativo"
+              aria-label="Donativo"
+            >
+              <Gift className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Selector de idioma en móvil */}
+        <div className="sm:hidden max-w-7xl mx-auto px-4 pb-2">
+          <Select value={language} onValueChange={onLanguageChange}>
+            <SelectTrigger className="w-full h-8 text-xs">
+              <Globe className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.map((l) => (
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filtros por fuente (solo en resultados) */}
+        {view === "results" && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground mr-1">Fuentes:</span>
+              <Tabs value={source} onValueChange={onSourceChange}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="all" className="text-xs h-7 px-3">Todas</TabsTrigger>
+                  <TabsTrigger value="gutenberg" className="text-xs h-7 px-3">Gutenberg</TabsTrigger>
+                  <TabsTrigger value="openlibrary" className="text-xs h-7 px-3">Open Library</TabsTrigger>
+                  <TabsTrigger value="standardebooks" className="text-xs h-7 px-3">Standard Ebooks</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {language !== "all" && (
+                <Badge variant="outline" className="text-xs">
+                  <Globe className="w-3 h-3 mr-1" />
+                  {LANGUAGES.find((l) => l.value === language)?.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ===== Home ===== */}
+      {view === "home" && (
+        <section className="flex-1 flex flex-col items-center justify-center px-4 py-12 text-center">
+          <div className="max-w-3xl mx-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-6">
+              <Sparkles className="w-3.5 h-3.5" />
+              {">"} 70.000 libros libres de descarga
+            </div>
+            <h2 className="font-serif text-4xl sm:text-5xl font-bold leading-tight mb-4">
+              Busca, descubre y descarga
+              <br />
+              <span className="text-primary">libros de dominio público</span>
+            </h2>
+            <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-xl mx-auto">
+              Una sola búsqueda en Project Gutenberg, Open Library y Standard Ebooks.
+              Descarga en EPUB, PDF, TXT, HTML o Kindle — totalmente gratis y legal.
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-2 mb-12">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onSuggestion(s)}
+                  className="px-3 py-1.5 text-sm rounded-full border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Categorías destacadas */}
+            <div className="mb-12">
+              <h3 className="font-serif text-xl font-semibold mb-4 flex items-center justify-center gap-2">
+                <Tag className="w-5 h-5" /> Explora por categoría
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => onCategoryClick(c.value)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left"
+                  >
+                    <span className="text-lg">{c.icon}</span>
+                    <span className="text-sm font-medium">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <FeatureCard
+                icon={<Library className="w-5 h-5" />}
+                title="3 fuentes en 1"
+                desc="Gutenberg, Open Library y Standard Ebooks unificados."
+              />
+              <FeatureCard
+                icon={<Download className="w-5 h-5" />}
+                title="Descarga directa"
+                desc="EPUB, PDF, TXT, HTML, Kindle — sin registros ni anuncios."
+              />
+              <FeatureCard
+                icon={<Eye className="w-5 h-5" />}
+                title="Vista previa"
+                desc="Lee un fragmento antes de descargar el libro completo."
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== Vista de categorías (grid grande) ===== */}
+      {view === "categories" && (
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+          <h2 className="font-serif text-2xl font-bold mb-2">Explora por categoría</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            Descubre libros agrupados por género literario.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => onCategoryClick(c.value)}
+                className="group relative p-6 rounded-xl border border-border bg-card hover:bg-secondary hover:border-primary/50 transition-all text-left overflow-hidden"
+              >
+                <div className="text-4xl mb-3">{c.icon}</div>
+                <h3 className="font-serif text-lg font-semibold mb-1">{c.label}</h3>
+                <p className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  Ver libros →
+                </p>
+              </button>
+            ))}
+          </div>
+        </main>
+      )}
+
+      {/* ===== Resultados / Favoritos / Historial ===== */}
+      {(view === "results" || view === "favorites" || view === "history") && (
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="font-serif text-xl font-semibold flex items-center gap-2">
+              {view === "favorites" && <Bookmark className="w-5 h-5" />}
+              {view === "history" && <History className="w-5 h-5" />}
+              {getViewTitle()}
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {displayed.length} {displayed.length === 1 ? "libro" : "libros"}
+              </span>
+              {view === "history" && history.length > 0 && (
+                <Button variant="outline" size="sm" onClick={clearHistory}>
+                  <X className="w-3.5 h-3.5 mr-1.5" /> Borrar historial
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {loading && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[2/3] w-full rounded-md" />
+              ))}
+            </div>
+          )}
+
+          {!loading && displayed.length === 0 && (
+            <Card className="p-10 text-center border-dashed">
+              {view === "favorites" ? (
+                <>
+                  <Bookmark className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Aún no has guardado libros en favoritos. ¡Busca y marca los que te gusten!
+                  </p>
+                </>
+              ) : view === "history" ? (
+                <>
+                  <History className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Aún no has descargado libros. Cuando lo hagas aparecerán aquí.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <BookMarked className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    No se encontraron libros. Prueba con otra palabra clave o categoría.
+                  </p>
+                </>
+              )}
+            </Card>
+          )}
+
+          {!loading && view === "history" && displayed.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {history.map((entry, i) => (
+                <Card
+                  key={`${entry.book.id}-${entry.timestamp}-${i}`}
+                  className="p-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden bg-secondary flex items-center justify-center">
+                    {entry.book.cover ? (
+                      <img
+                        src={entry.book.cover}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                      />
+                    ) : (
+                      <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-serif text-sm font-medium line-clamp-1">{entry.book.title}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{entry.book.author}</p>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{entry.format}</Badge>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {new Date(entry.timestamp).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => recordDownload(entry.book, entry.format, entry.url)}
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" /> Repetir
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelected(entry.book)}
+                  >
+                    Ver
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {!loading && view !== "history" && displayed.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {displayed.map((b) => (
+                <BookCard
+                  key={b.id}
+                  book={b}
+                  fav={isFav(b.id)}
+                  onToggleFav={() => toggleFav(b)}
+                  onOpen={() => setSelected(b)}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* ===== Footer ===== */}
+      <footer className="mt-auto border-t border-border bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-muted-foreground space-y-2">
+          <p>
+            Todos los libros indexados son de dominio público o con permiso de descarga
+            gratuita, provenientes de Project Gutenberg, Open Library e Internet Archive,
+            y Standard Ebooks.
+          </p>
+          <p>
+            Hecho con cariño para los amantes de la lectura · {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
+
+      {/* ===== Modal de detalle ===== */}
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selected && (
+            <>
+              <DialogHeader>
+                <div className="flex gap-4 items-start">
+                  <div className="w-24 h-36 flex-shrink-0 rounded-md overflow-hidden border border-border bg-secondary flex items-center justify-center">
+                    {selected.cover ? (
+                      <img
+                        src={selected.cover}
+                        alt={`Portada de ${selected.title}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <BookOpen className="w-8 h-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Badge
+                      variant="outline"
+                      className={`mb-1 ${SOURCE_BADGE[selected.source]}`}
+                    >
+                      {SOURCE_LABEL[selected.source]}
+                    </Badge>
+                    <DialogTitle className="font-serif text-xl leading-tight pr-6">
+                      {selected.title}
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-sm">
+                      por {selected.author}
+                      {selected.year ? ` · ${selected.year}` : ""}
+                      {selected.language
+                        ? ` · ${LANG_LABEL[selected.language] || selected.language}`
+                        : ""}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {selected.subjects && selected.subjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selected.subjects.slice(0, 6).map((s, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs font-normal">
+                        {s.length > 40 ? s.slice(0, 40) + "…" : s}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {selected.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {selected.description}
+                  </p>
+                )}
+
+                {/* Botón de vista previa */}
+                {selected.previewUrl && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      openPreview(selected);
+                    }}
+                  >
+                    <Eye className="w-4 h-4 mr-1.5" /> Ver vista previa del texto
+                  </Button>
+                )}
+
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                    <Download className="w-4 h-4" /> Descargas disponibles
+                  </h4>
+                  {selected.downloads.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No hay descargas directas para este título. Prueba en otra fuente.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {selected.downloads.map((d, i) => {
+                        const isExternal = d.url.startsWith("http");
+                        return (
+                          <Button
+                            key={i}
+                            asChild
+                            size="sm"
+                            variant={i === 0 ? "default" : "outline"}
+                          >
+                            <a
+                              href={d.url}
+                              target={isExternal ? "_blank" : undefined}
+                              rel={isExternal ? "noopener noreferrer" : undefined}
+                              onClick={() => recordDownload(selected, d.label, d.url)}
+                            >
+                              <FileText className="w-3.5 h-3.5 mr-1.5" />
+                              {d.label}
+                              {isExternal && <ExternalLink className="w-3 h-3 ml-1 opacity-60" />}
+                            </a>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    variant={isFav(selected.id) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleFav(selected)}
+                  >
+                    <Heart
+                      className={`w-4 h-4 mr-1.5 ${isFav(selected.id) ? "fill-current" : ""}`}
+                    />
+                    {isFav(selected.id) ? "En favoritos" : "Añadir a favoritos"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Sheet de vista previa ===== */}
+      <Sheet
+        open={!!previewBook}
+        onOpenChange={(o) => {
+          if (!o) {
+            setPreviewBook(null);
+            setPreviewText("");
+            setPreviewError("");
+          }
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="font-serif flex items-center gap-2 pr-6">
+              <Eye className="w-4 h-4" /> Vista previa
+            </SheetTitle>
+            <SheetDescription className="line-clamp-1">
+              {previewBook?.title} — {previewBook?.author}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            {previewLoading && (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Cargando texto…
+                </p>
+              </div>
+            )}
+            {!previewLoading && previewError && (
+              <Card className="p-4 border-dashed">
+                <p className="text-sm text-muted-foreground">{previewError}</p>
+              </Card>
+            )}
+            {!previewLoading && !previewError && previewText && (
+              <ScrollArea className="h-[calc(100vh-8rem)]">
+                <p className="font-serif text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                  {previewText}
+                </p>
+                <div className="mt-6 pt-4 border-t border-border text-xs text-muted-foreground">
+                  Fragmento de muestra. Descarga el libro completo para seguir leyendo.
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ===== Diálogo de Donativo ===== */}
+      <Dialog open={showDonativo} onOpenChange={setShowDonativo}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif flex items-center gap-2">
+              <Gift className="w-5 h-5 text-accent" /> Apoya ELMUBE BOOKS
+            </DialogTitle>
+            <DialogDescription>
+              Si esta app te ha sido útil, considera apoyarla con un donativo.
+              Cada peso ayuda a mantener el servidor y seguir mejorando.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {/* QR */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="bg-white p-3 rounded-lg border border-border">
+                <img
+                  src="/donativo/qr-spei.png"
+                  alt="Código QR para donativo SPEI a ELMUBE BOOKS"
+                  className="w-48 h-48"
+                  width={192}
+                  height={192}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center flex items-center gap-1">
+                <QrCode className="w-3 h-3" />
+                Escanea con tu app bancaria para transferir
+              </p>
+            </div>
+
+            {/* Datos bancarios */}
+            <div className="bg-secondary/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Beneficiario:</span>
+                <span className="font-medium text-right">Miguel Balderas Medina</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Banco:</span>
+                <span className="font-medium text-right">Spin by Oxxo</span>
+              </div>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-muted-foreground">CLABE:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-medium tracking-wider">7289 6900 0071 1670 65</span>
+                  <button
+                    onClick={copyClabe}
+                    className="p-1 rounded hover:bg-background transition-colors"
+                    title="Copiar CLABE"
+                    aria-label="Copiar CLABE al portapapeles"
+                  >
+                    {copiedClabe ? (
+                      <Check className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-center text-muted-foreground italic">
+              "Un libro, un café, una sonrisa — gracias por tu apoyo." 📚
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster />
+    </div>
+  );
+}
+
+/* ====== Subcomponentes ====== */
+
+function FeatureCard({
+  icon,
+  title,
+  desc,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Card className="p-4 text-left">
+      <div className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center mb-2">
+        {icon}
+      </div>
+      <h3 className="font-serif font-semibold text-sm mb-1">{title}</h3>
+      <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+    </Card>
+  );
+}
+
+function BookCard({
+  book,
+  fav,
+  onToggleFav,
+  onOpen,
+}: {
+  book: Book;
+  fav: boolean;
+  onToggleFav: () => void;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="group flex flex-col">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
+        className="relative aspect-[2/3] w-full rounded-md overflow-hidden border border-border bg-secondary hover:border-primary/50 transition-all shadow-sm hover:shadow-md text-left cursor-pointer"
+      >
+        {book.cover ? (
+          <img
+            src={book.cover}
+            alt={`Portada de ${book.title}`}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+            onError={(e) => {
+              const t = e.currentTarget as HTMLImageElement;
+              t.style.display = "none";
+              const parent = t.parentElement;
+              if (parent && !parent.querySelector(".fallback-cover")) {
+                const fb = document.createElement("div");
+                fb.className =
+                  "fallback-cover w-full h-full flex flex-col items-center justify-center p-2 text-center";
+                fb.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground mb-1"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
+                parent.appendChild(fb);
+              }
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+            <BookOpen className="w-6 h-6 text-muted-foreground mb-1" />
+            <span className="text-[10px] text-muted-foreground line-clamp-3 font-serif">
+              {book.title}
+            </span>
+          </div>
+        )}
+
+        {/* Badge fuente */}
+        <div className="absolute top-1.5 left-1.5">
+          <Badge
+            variant="outline"
+            className={`text-[9px] py-0 px-1.5 h-4 backdrop-blur-sm ${SOURCE_BADGE[book.source]}`}
+          >
+            {book.source === "gutenberg" ? "PG" : book.source === "openlibrary" ? "OL" : "SE"}
+          </Badge>
+        </div>
+
+        {/* Botón favorito */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFav();
+          }}
+          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+          aria-label={fav ? "Quitar de favoritos" : "Añadir a favoritos"}
+        >
+          <Heart
+            className={`w-3.5 h-3.5 ${fav ? "fill-accent text-accent" : "text-muted-foreground"}`}
+          />
+        </button>
+
+        {/* Indicador de descarga */}
+        {book.downloads.length > 0 && (
+          <div className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+            <Download className="w-3 h-3" />
+          </div>
+        )}
+
+        {/* Indicador de vista previa */}
+        {book.previewUrl && (
+          <div className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
+            <Eye className="w-3 h-3" />
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2 px-0.5">
+        <h3 className="font-serif text-sm font-medium leading-snug line-clamp-2">
+          {book.title}
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+          {book.author}
+        </p>
+      </div>
+    </div>
+  );
+}

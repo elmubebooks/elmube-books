@@ -1,0 +1,24 @@
+# Configuración de Netlify para ELMUBE BOOKS
+# Next.js 16 con App Router y API Routes
+
+[build]
+  # Comando de build simple (sin el wrapper standalone del scaffold)
+  command = "next build"
+  # Carpeta que se publica
+  publish = ".next"
+
+[build.environment]
+  # Versión de Node compatible con Next.js 16
+  NODE_VERSION = "20"
+  # Next.js usa telemetry, lo desactivamos en build
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# El plugin oficial de Next.js para Netlify se instala automáticamente
+# cuando detecta Next.js en package.json. Convierte las API routes en
+# Netlify Functions automáticamente.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Cache de Next.js entre deploys para builds más rápidos
+[[build.cache]]
+  paths = ["node_modules/.cache", ".next/cache"]
