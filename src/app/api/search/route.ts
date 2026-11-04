@@ -133,16 +133,17 @@ async function searchGutenberg(
       const author = contentMatch?.[1]?.trim() || "Autor desconocido";
 
       // URLs canónicas de descarga para un ebook ID de Gutenberg
+      // IMPORTANTE: Gutenberg NO ofrece PDF en la mayoría de los casos
+      // (las URLs /files/{id}/{id}-pdf.pdf devuelven 404). Por eso no lo incluimos.
       const base = `https://www.gutenberg.org/ebooks/${ebookId}`;
       const formats: { label: string; url: string }[] = [
-        { label: "HTML", url: `${base}.html.images` },
         { label: "EPUB", url: `${base}.epub3.images` },
         { label: "EPUB", url: `${base}.epub.images` },
         { label: "Kindle", url: `${base}.kf8.images` },
+        { label: "HTML", url: `${base}.html.images` },
         { label: "TXT", url: `${base}.txt.utf-8` },
-        { label: "PDF", url: `https://www.gutenberg.org/files/${ebookId}/${ebookId}-pdf.pdf` },
       ];
-      // El primer EPUB es el preferido; quitar duplicados de label dejando solo el primero
+      // Quitar duplicados de label dejando solo el primero de cada tipo
       const seen = new Set<string>();
       const downloads = formats.filter((f) => {
         if (seen.has(f.label)) return false;

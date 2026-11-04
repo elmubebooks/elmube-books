@@ -460,7 +460,8 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       {/* ===== Header ===== */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+        {/* Fila 1: Logo + Buscador + Idioma (desktop) / Buscador (móvil) */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => {
               setView("home");
@@ -473,7 +474,7 @@ export default function Home() {
             <div className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
             </div>
-            <div className="hidden sm:block text-left">
+            <div className="hidden lg:block text-left">
               <h1 className="font-serif text-lg font-semibold leading-none">
                 ELMUBE BOOKS
               </h1>
@@ -494,7 +495,7 @@ export default function Home() {
                 aria-label="Buscar libros"
               />
             </div>
-            {/* Selector de idioma */}
+            {/* Selector de idioma - desktop */}
             <div className="hidden sm:flex items-center">
               <Select value={language} onValueChange={onLanguageChange}>
                 <SelectTrigger className="w-[140px] h-10">
@@ -510,13 +511,14 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={loading} className="h-10 px-4">
+            <Button type="submit" disabled={loading} className="h-10 px-3 sm:px-4">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               <span className="hidden sm:inline ml-1">Buscar</span>
             </Button>
           </form>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Iconos - solo desktop, en móvil van en fila de abajo */}
+          <div className="hidden md:flex items-center gap-1 flex-shrink-0">
             <IconButtonWithLabel
               icon={<Grid3x3 className="w-5 h-5" />}
               label="Categorías"
@@ -556,10 +558,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Selector de idioma en móvil */}
-        <div className="sm:hidden max-w-7xl mx-auto px-4 pb-2">
+        {/* Fila 2 (móvil/tablet): Iconos en fila horizontal + selector idioma */}
+        <div className="md:hidden max-w-7xl mx-auto px-3 pb-2 flex items-center gap-1 overflow-x-auto scroll-elegant">
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="w-full h-8 text-xs">
+            <SelectTrigger className="h-8 w-[110px] text-xs flex-shrink-0">
               <Globe className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
@@ -571,6 +573,74 @@ export default function Home() {
               ))}
             </SelectContent>
           </Select>
+          <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
+          <button
+            onClick={() => {
+              setView(view === "categories" ? "home" : "categories");
+              setActiveQuery("");
+              setCategory("");
+            }}
+            className={`flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
+              view === "categories" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+            }`}
+            aria-label="Categorías"
+          >
+            <Grid3x3 className="w-4 h-4" />
+            <span>Categorías</span>
+          </button>
+          <button
+            onClick={() => setView(view === "history" ? "home" : "history")}
+            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
+              view === "history" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+            }`}
+            aria-label="Historial"
+          >
+            <History className="w-4 h-4" />
+            <span>Historial</span>
+            {history.length > 0 && (
+              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+                {history.length > 9 ? "9+" : history.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setView(view === "favorites" ? "home" : "favorites")}
+            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
+              view === "favorites" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+            }`}
+            aria-label="Favoritos"
+          >
+            <Bookmark className="w-4 h-4" />
+            <span>Favoritos</span>
+            {favorites.length > 0 && (
+              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+                {favorites.length > 9 ? "9+" : favorites.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={toggleDark}
+            className="flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 hover:bg-secondary transition-colors"
+            aria-label="Cambiar tema"
+          >
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <span>{dark ? "Claro" : "Oscuro"}</span>
+          </button>
+          <button
+            onClick={toggleLike}
+            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
+              liked ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+            }`}
+            aria-label="Me gusta"
+          >
+            <ThumbsUp className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
+            <span>Me gusta</span>
+            {likeCount > 0 && (
+              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+                {likeCount > 99 ? "99+" : likeCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Filtros por fuente (solo en resultados) */}
@@ -941,30 +1011,51 @@ export default function Home() {
                       No hay descargas directas para este título. Prueba en otra fuente.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selected.downloads.map((d, i) => {
-                        const isExternal = d.url.startsWith("http");
-                        return (
-                          <Button
-                            key={i}
-                            asChild
-                            size="sm"
-                            variant={i === 0 ? "default" : "outline"}
-                          >
-                            <a
-                              href={d.url}
-                              target={isExternal ? "_blank" : undefined}
-                              rel={isExternal ? "noopener noreferrer" : undefined}
-                              onClick={() => recordDownload(selected, d.label, d.url)}
+                    <>
+                      {/* Recomendación EPUB */}
+                      {selected.downloads.some((d) => d.label === "EPUB") && (
+                        <div className="mb-3 p-2.5 rounded-md bg-accent/10 border border-accent/30 text-xs text-accent-foreground flex items-start gap-2">
+                          <Sparkles className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-accent" />
+                          <span>
+                            <strong>Recomendado:</strong> descarga en formato{" "}
+                            <strong>EPUB</strong> — funciona en todos los lectores
+                            (telefono, tablet, Kindle) y pesa menos. El PDF no está
+                            disponible para todos los libros.
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {selected.downloads.map((d, i) => {
+                          const isExternal = d.url.startsWith("http");
+                          const isEpub = d.label === "EPUB";
+                          const isPdf = d.label === "PDF";
+                          return (
+                            <Button
+                              key={i}
+                              asChild
+                              size="sm"
+                              variant={isEpub ? "default" : isPdf ? "outline" : i === 0 ? "default" : "outline"}
                             >
-                              <FileText className="w-3.5 h-3.5 mr-1.5" />
-                              {d.label}
-                              {isExternal && <ExternalLink className="w-3 h-3 ml-1 opacity-60" />}
-                            </a>
-                          </Button>
-                        );
-                      })}
-                    </div>
+                              <a
+                                href={d.url}
+                                target={isExternal ? "_blank" : undefined}
+                                rel={isExternal ? "noopener noreferrer" : undefined}
+                                onClick={() => recordDownload(selected, d.label, d.url)}
+                              >
+                                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                {d.label}
+                                {isEpub && (
+                                  <Badge variant="secondary" className="ml-1.5 text-[9px] py-0 px-1 h-3.5">
+                                    ✓
+                                  </Badge>
+                                )}
+                                {isExternal && <ExternalLink className="w-3 h-3 ml-1 opacity-60" />}
+                              </a>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
 
