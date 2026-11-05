@@ -1896,6 +1896,17 @@ export default function Home() {
                           </span>
                         </div>
                       )}
+                      {/* Mensaje sobre "Leer online" (registro externo) */}
+                      {selected.downloads.some((d) => d.label === "Leer online" || d.label === "▶ Escuchar online" || d.label === "Leer en línea") && (
+                        <div className="mt-2 p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                          <span className="text-blue-500">ℹ️</span>
+                          <span>
+                            <strong>"Leer online"</strong> abre la página del libro en otra web (Open Library, Internet Archive, etc.).
+                            Algunos sitios pueden pedir <strong>registro gratuito</strong> o préstamo digital para acceder al contenido.
+                            Esto es externo a ELMUBE BOOKS.
+                          </span>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
