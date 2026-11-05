@@ -136,19 +136,19 @@ def make_icon(size, filename, with_text=True, maskable=False):
         )
 
     if with_text and size >= 96:
-        # Con texto: libro arriba + texto ELMUBE BOOKS abajo, más juntos
-        book_w = int(size * (0.58 if maskable else 0.68))
-        book_h = int(size * (0.36 if maskable else 0.40))
-        book_cy = int(size * 0.36)
+        # Con texto: libro arriba + texto ELMUBE BOOKS abajo
+        book_w = int(size * (0.55 if maskable else 0.62))
+        book_h = int(size * (0.32 if maskable else 0.36))
+        book_cy = int(size * 0.35)
 
-        # Texto ELMUBE BOOKS en dos líneas para mejor contraste de color
+        # Texto ELMUBE BOOKS en dos líneas - fuente más pequeña para que no se corte
         text_max_width = size - (4 * max(4, size // 30) if not maskable else size // 4)
-        font_size_start = max(11, size // 6)
+        font_size_start = max(10, size // 8)
 
         font1, w1, h1 = fit_font(draw, "ELMUBE", text_max_width, font_size_start)
         font2, w2, h2 = fit_font(draw, "BOOKS", text_max_width, font_size_start)
         line_h = max(h1, h2)
-        line_gap = max(2, size // 80)
+        line_gap = max(2, size // 100)
         text_total_h = line_h * 2 + line_gap
 
         # Posición del texto: parte inferior, con margen generoso
@@ -240,9 +240,9 @@ svg = """<?xml version="1.0" encoding="UTF-8"?>
   <line x1="272" y1="265" x2="382" y2="250" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
   <line x1="272" y1="290" x2="382" y2="290" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
 
-  <!-- Texto ELMUBE BOOKS -->
-  <text x="256" y="395" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" fill="#fcf5e6" text-anchor="middle" letter-spacing="1">ELMUBE</text>
-  <text x="256" y="460" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" fill="#d4a55f" text-anchor="middle" letter-spacing="1">BOOKS</text>
+  <!-- Texto ELMUBE BOOKS - fuente más pequeña para que no se corte -->
+  <text x="256" y="400" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#fcf5e6" text-anchor="middle" letter-spacing="1">ELMUBE</text>
+  <text x="256" y="455" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#d4a55f" text-anchor="middle" letter-spacing="1">BOOKS</text>
 </svg>
 """
 with open(os.path.join(OUT, "icon.svg"), "w") as f:

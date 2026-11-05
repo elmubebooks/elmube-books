@@ -37,7 +37,7 @@
   <line x1="272" y1="265" x2="382" y2="250" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
   <line x1="272" y1="290" x2="382" y2="290" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
 
-  <!-- Texto ELMUBE BOOKS -->
-  <text x="256" y="395" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" fill="#fcf5e6" text-anchor="middle" letter-spacing="1">ELMUBE</text>
-  <text x="256" y="460" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="bold" fill="#d4a55f" text-anchor="middle" letter-spacing="1">BOOKS</text>
+  <!-- Texto ELMUBE BOOKS - fuente más pequeña para que no se corte -->
+  <text x="256" y="400" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#fcf5e6" text-anchor="middle" letter-spacing="1">ELMUBE</text>
+  <text x="256" y="455" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#d4a55f" text-anchor="middle" letter-spacing="1">BOOKS</text>
 </svg>

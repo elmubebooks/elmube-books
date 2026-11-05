@@ -769,12 +769,12 @@ export default function Home() {
             <div className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
             </div>
-            {/* Móvil: solo nombre compacto / Desktop: nombre + subtítulo */}
-            <div className="text-left">
-              <h1 className="font-serif text-sm sm:text-lg font-semibold leading-none">
+            {/* Solo desktop: nombre + subtítulo. En móvil solo el icono para dar espacio al buscador */}
+            <div className="hidden lg:block text-left">
+              <h1 className="font-serif text-lg font-semibold leading-none">
                 ELMUBE BOOKS
               </h1>
-              <p className="hidden lg:block text-[11px] text-muted-foreground leading-tight mt-0.5">
+              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
                 Libros libres de dominio público
               </p>
             </div>
@@ -877,8 +877,8 @@ export default function Home() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="flex-1 flex gap-2 max-w-2xl mx-auto">
-            <div className="relative flex-1">
+          <form onSubmit={handleSubmit} className="flex-1 flex gap-1.5 sm:gap-2 sm:max-w-2xl mx-auto">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
                 value={query}
@@ -904,7 +904,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={loading} className="h-10 px-3 sm:px-4">
+            <Button type="submit" disabled={loading} className="h-10 px-3 sm:px-4 flex-shrink-0">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               <span className="hidden sm:inline ml-1">Buscar</span>
             </Button>
@@ -1103,20 +1103,20 @@ export default function Home() {
 
       {/* ===== Home con carruseles tipo Netflix ===== */}
       {view === "home" && (
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           {/* Hero compacto */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-4">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-3">
               <Sparkles className="w-3.5 h-3.5" />
               {">"} 70.000 libros libres de descarga
             </div>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-3">
+            <h2 className="font-serif text-xl sm:text-3xl font-bold leading-tight mb-2">
               Busca, descubre y descarga
               <br />
               <span className="text-primary">libros de dominio público</span>
             </h2>
-            <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
-              Una sola búsqueda en 6 fuentes. Descarga en EPUB, PDF, TXT, HTML o Kindle — gratis y legal.
+            <p className="text-muted-foreground text-xs sm:text-sm max-w-xl mx-auto">
+              Una sola búsqueda en 7 fuentes. Descarga en EPUB, PDF, TXT, HTML o Kindle — gratis y legal.
             </p>
           </div>
 
@@ -1365,17 +1365,16 @@ export default function Home() {
 
           {!loading && view !== "history" && displayed.length > 0 && (
             <>
-              {/* Móvil: carrusel horizontal scrollable */}
-              <div className="sm:hidden flex gap-3 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4 snap-x snap-mandatory">
+              {/* Móvil: grid de 2 columnas (cards grandes) */}
+              <div className="sm:hidden grid grid-cols-2 gap-3">
                 {displayed.map((b) => (
-                  <div key={b.id} className="flex-shrink-0 w-32 snap-start">
-                    <BookCard
-                      book={b}
-                      fav={isFav(b.id)}
-                      onToggleFav={() => toggleFav(b)}
-                      onOpen={() => setSelected(b)}
-                    />
-                  </div>
+                  <BookCard
+                    key={b.id}
+                    book={b}
+                    fav={isFav(b.id)}
+                    onToggleFav={() => toggleFav(b)}
+                    onOpen={() => setSelected(b)}
+                  />
                 ))}
               </div>
               {/* Desktop: grid */}
@@ -2098,14 +2097,24 @@ function BookCard({
                 const fb = document.createElement("div");
                 fb.className =
                   "fallback-cover w-full h-full flex flex-col items-center justify-center p-2 text-center";
-                fb.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground mb-1"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
+                if (book.isAudiobook) {
+                  fb.innerHTML = `<div class="w-10 h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-fuchsia-600"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M21 14h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1z"/><path d="M3 14a9 9 0 0 1 18 0"/></svg></div><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
+                } else {
+                  fb.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground mb-1"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
+                }
                 parent.appendChild(fb);
               }
             }}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-            <BookOpen className="w-6 h-6 text-muted-foreground mb-1" />
+            {book.isAudiobook ? (
+              <div className="w-10 h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-2">
+                <Headphones className="w-5 h-5 text-fuchsia-600" />
+              </div>
+            ) : (
+              <BookOpen className="w-6 h-6 text-muted-foreground mb-1" />
+            )}
             <span className="text-[10px] text-muted-foreground line-clamp-3 font-serif">
               {book.title}
             </span>
@@ -2159,10 +2168,10 @@ function BookCard({
       </div>
 
       <div className="mt-2 px-0.5">
-        <h3 className="font-serif text-sm font-medium leading-snug line-clamp-2">
+        <h3 className="font-serif text-sm sm:text-base font-medium leading-snug line-clamp-2">
           {book.title}
         </h3>
-        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-1">
           {book.author}
         </p>
       </div>
