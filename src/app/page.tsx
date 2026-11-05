@@ -950,22 +950,21 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fila 2 (móvil/tablet): Menú → Libros → Idioma - sticky, SIN overflow */}
-        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-3 py-2 flex items-center gap-1.5">
-          {/* Botón Menú */}
+        {/* Fila 2 (móvil/tablet): Menú → Libros → Autores → Idioma - sticky */}
+        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-2.5 py-2 flex items-center gap-1.5 overflow-x-auto scroll-elegant">
+          {/* Botón Menú (solo icono) */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium flex-shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors flex-shrink-0"
             aria-label="Abrir menú"
           >
-            <Menu className="w-3.5 h-3.5" />
-            <span>Menú</span>
+            <Menu className="w-4 h-4" />
           </button>
           {/* Botón Libros (dropdown categorías en móvil) */}
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setBooksDropdownOpen((v) => !v)}
-              className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
+              className="flex items-center gap-1 px-2 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
               aria-label="Ver categorías de libros"
               aria-expanded={booksDropdownOpen}
             >
@@ -1009,7 +1008,7 @@ export default function Home() {
                 setAuthorsDropdownOpen((v) => !v);
                 setBooksDropdownOpen(false);
               }}
-              className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
+              className="flex items-center gap-1 px-2 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
               aria-label="Ver autores destacados"
               aria-expanded={authorsDropdownOpen}
             >
@@ -1057,7 +1056,7 @@ export default function Home() {
           </div>
           {/* Selector Idioma */}
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-[120px] text-xs flex-shrink-0">
+            <SelectTrigger className="h-8 w-[110px] text-xs flex-shrink-0">
               <Globe className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
