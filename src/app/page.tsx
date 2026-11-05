@@ -218,7 +218,8 @@ const CATEGORIES = [
 ];
 
 // Autores cuyas obras SÍ son dominio público, organizados por país
-// Incluye escritores de la época colonial, independencia y modernistas
+// Incluye escritores de la época colonial, independencia, romanticismo y modernistas
+// NOTA: García Márquez (†2014), Vargas Llosa (vivo), Borges (†1986) NO son dominio público aún
 const LATIN_AUTHORS = [
   // México 🇲🇽
   { name: "Sor Juana Inés de la Cruz", country: "🇲🇽", years: "1648-1695", query: "Sor Juana Ines de la Cruz" },
@@ -227,31 +228,68 @@ const LATIN_AUTHORS = [
   { name: "Ignacio Manuel Altamirano", country: "🇲🇽", years: "1834-1893", query: "Ignacio Manuel Altamirano" },
   { name: "Manuel Acuña", country: "🇲🇽", years: "1849-1873", query: "Manuel Acuna" },
   { name: "Salvador Díaz Mirón", country: "🇲🇽", years: "1853-1928", query: "Salvador Diaz Miron" },
+  { name: "José Joaquín Fernández de Lizardi", country: "🇲🇽", years: "1776-1827", query: "Fernandez Lizardi Periquillo" },
+  { name: "Justo Sierra", country: "🇲🇽", years: "1848-1912", query: "Justo Sierra" },
+  { name: "Luis G. Urbina", country: "🇲🇽", years: "1864-1934", query: "Luis Urbina" },
+  { name: "Balún Canán / Rosario Castellanos", country: "🇲🇽", years: "1925-1974", query: "Rosario Castellanos" },
   // Argentina 🇦🇷
   { name: "José Hernández", country: "🇦🇷", years: "1834-1886", query: "Jose Hernandez Martin Fierro" },
   { name: "Esteban Echeverría", country: "🇦🇷", years: "1805-1851", query: "Esteban Echeverria" },
   { name: "Domingo Faustino Sarmiento", country: "🇦🇷", years: "1811-1888", query: "Sarmiento Facundo" },
+  { name: "Juan Bautista Alberdi", country: "🇦🇷", years: "1810-1884", query: "Juan Bautista Alberdi" },
+  { name: "Mitre / Bartolomé Mitre", country: "🇦🇷", years: "1821-1906", query: "Bartolome Mitre" },
+  { name: "Eugenio Cambaceres", country: "🇦🇷", years: "1843-1888", query: "Eugenio Cambaceres" },
+  { name: "Rafael Obligado", country: "🇦🇷", years: "1851-1920", query: "Rafael Obligado" },
   // Uruguay 🇺🇾
   { name: "Juan Zorrilla de San Martín", country: "🇺🇾", years: "1855-1931", query: "Juan Zorrilla San Martin" },
   { name: "Horacio Quiroga", country: "🇺🇾", years: "1878-1937", query: "Horacio Quiroga" },
+  { name: "José Enrique Rodó", country: "🇺🇾", years: "1871-1917", query: "Jose Enrique Rodo Ariel" },
+  { name: "Juan Carlos Onetti", country: "🇺🇾", years: "1909-1994", query: "Juan Carlos Onetti" },
   // Nicaragua 🇳🇮
   { name: "Rubén Darío", country: "🇳🇮", years: "1867-1916", query: "Ruben Dario" },
   // Colombia 🇨🇴
   { name: "José Asunción Silva", country: "🇨🇴", years: "1865-1896", query: "Jose Asuncion Silva" },
   { name: "Jorge Isaacs", country: "🇨🇴", years: "1837-1895", query: "Jorge Isaacs Maria" },
+  { name: "Tomás Carrasquilla", country: "🇨🇴", years: "1858-1940", query: "Tomas Carrasquilla" },
+  { name: "Rufino José Cuervo", country: "🇨🇴", years: "1844-1911", query: "Rufino Jose Cuervo" },
   // Cuba 🇨🇺
   { name: "José Martí", country: "🇨🇺", years: "1853-1895", query: "Jose Marti" },
   { name: "Gertrudis Gómez de Avellaneda", country: "🇨🇺", years: "1814-1873", query: "Gertrudis Gomez Avellaneda" },
+  { name: "Julián del Casal", country: "🇨🇺", years: "1863-1893", query: "Julian del Casal" },
+  { name: "Cirilo Villaverde", country: "🇨🇺", years: "1812-1894", query: "Cirilo Villaverde Cecilia Valdes" },
   // Perú 🇵🇪
   { name: "Ricardo Palma", country: "🇵🇪", years: "1833-1919", query: "Ricardo Palma Tradiciones" },
   { name: "Manuel González Prada", country: "🇵🇪", years: "1844-1918", query: "Manuel Gonzalez Prada" },
+  { name: "Clorinda Matto de Turner", country: "🇵🇪", years: "1852-1909", query: "Clorinda Matto Turner" },
+  { name: "Abraham Valdelomar", country: "🇵🇪", years: "1888-1919", query: "Abraham Valdelomar" },
   // Venezuela 🇻🇪
   { name: "Andrés Bello", country: "🇻🇪", years: "1781-1865", query: "Andres Bello" },
-  { name: "Rufino José Cuervo", country: "🇨🇴", years: "1844-1911", query: "Rufino Jose Cuervo" },
+  { name: "Simón Rodríguez", country: "🇻🇪", years: "1769-1854", query: "Simon Rodriguez" },
+  { name: "Fermín Toro", country: "🇻🇪", years: "1806-1865", query: "Fermin Toro" },
   // Chile 🇨🇱
   { name: "Gabriela Mistral", country: "🇨🇱", years: "1889-1957", query: "Gabriela Mistral" },
+  { name: "Alberto Blest Gana", country: "🇨🇱", years: "1830-1920", query: "Alberto Blest Gana" },
+  { name: "Baldomero Lillo", country: "🇨🇱", years: "1867-1923", query: "Baldomero Lillo" },
+  { name: "Pedro Prado", country: "🇨🇱", years: "1886-1952", query: "Pedro Prado" },
   // Guatemala 🇬🇹
   { name: "Miguel Ángel Asturias", country: "🇬🇹", years: "1899-1974", query: "Miguel Angel Asturias" },
+  { name: "José Milla y Vidaurre", country: "🇬🇹", years: "1822-1882", query: "Jose Milla Vidaurre" },
+  // Bolivia 🇧🇴
+  { name: "Jaime Saenz", country: "🇧🇴", years: "1921-1986", query: "Jaime Saenz" },
+  { name: "Ricardo Jaimes Freyre", country: "🇧🇴", years: "1868-1933", query: "Ricardo Jaimes Freyre" },
+  // Ecuador 🇪🇨
+  { name: "Juan Montalvo", country: "🇪🇨", years: "1832-1889", query: "Juan Montalvo" },
+  { name: "Juan León Mera", country: "🇪🇨", years: "1832-1894", query: "Juan Leon Mera Cumanda" },
+  // Paraguay 🇵🇾
+  { name: "Augusto Roa Bastos", country: "🇵🇾", years: "1917-2005", query: "Roa Bastos" },
+  // Puerto Rico 🇵🇷
+  { name: "Eugenio María de Hostos", country: "🇵🇷", years: "1839-1903", query: "Eugenio Hostos" },
+  // República Dominicana 🇩🇴
+  { name: "Salomé Ureña", country: "🇩🇴", years: "1850-1897", query: "Salome Urena" },
+  // Brasil 🇧🇷
+  { name: "Machado de Assis", country: "🇧🇷", years: "1839-1908", query: "Machado Assis" },
+  { name: "José de Alencar", country: "🇧🇷", years: "1829-1877", query: "Jose Alencar" },
+  { name: "Castro Alves", country: "🇧🇷", years: "1847-1871", query: "Castro Alves" },
   // España 🇪🇸
   { name: "Cervantes", country: "🇪🇸", years: "1547-1616", query: "Cervantes Saavedra" },
   { name: "Lope de Vega", country: "🇪🇸", years: "1562-1635", query: "Lope de Vega" },
@@ -265,6 +303,16 @@ const LATIN_AUTHORS = [
   { name: "Juan Valera", country: "🇪🇸", years: "1824-1905", query: "Juan Valera" },
   { name: "José de Espronceda", country: "🇪🇸", years: "1808-1842", query: "Espronceda" },
   { name: "Mariano José de Larra", country: "🇪🇸", years: "1809-1837", query: "Mariano Larra" },
+  { name: "Benito Pérez Galdós", country: "🇪🇸", years: "1843-1920", query: "Benito Perez Galdos" },
+  { name: "Leopoldo Alas Clarín", country: "🇪🇸", years: "1852-1901", query: "Leopoldo Alas Clarin" },
+  { name: "Emilia Pardo Bazán", country: "🇪🇸", years: "1851-1921", query: "Emilia Pardo Bazan" },
+  { name: "Vicente Blasco Ibáñez", country: "🇪🇸", years: "1867-1928", query: "Vicente Blasco Ibanez" },
+  { name: "Miguel de Unamuno", country: "🇪🇸", years: "1864-1936", query: "Miguel Unamuno" },
+  { name: "Pío Baroja", country: "🇪🇸", years: "1872-1956", query: "Pio Baroja" },
+  { name: "Azorín", country: "🇪🇸", years: "1873-1967", query: "Azorin Jose Martinez Ruiz" },
+  { name: "Antonio Machado", country: "🇪🇸", years: "1875-1939", query: "Antonio Machado" },
+  { name: "Juan Ramón Jiménez", country: "🇪🇸", years: "1881-1958", query: "Juan Ramon Jimenez Platero" },
+  { name: "Ramón del Valle-Inclán", country: "🇪🇸", years: "1866-1936", query: "Valle Inclan" },
 ];
 
 // Agrupar por país para el dropdown
@@ -288,6 +336,12 @@ const COUNTRY_NAMES: Record<string, string> = {
   "🇻🇪": "Venezuela",
   "🇨🇱": "Chile",
   "🇬🇹": "Guatemala",
+  "🇧🇴": "Bolivia",
+  "🇪🇨": "Ecuador",
+  "🇵🇾": "Paraguay",
+  "🇵🇷": "Puerto Rico",
+  "🇩🇴": "Rep. Dominicana",
+  "🇧🇷": "Brasil",
   "🇪🇸": "España",
 };
 

@@ -19,38 +19,38 @@ export interface Book {
 /* Mapeo categorías UI → keywords por fuente */
 export const CATEGORY_MAP: Record<
   string,
-  { gutenberg: string; openlibrary: string; standardebooks: string }
+  { gutenberg: string; openlibrary: string; standardebooks: string; gutenbergEs?: string }
 > = {
   // Literatura
-  ficcion: { gutenberg: "fiction", openlibrary: "fiction", standardebooks: "fiction" },
-  novela: { gutenberg: "novel", openlibrary: "novel", standardebooks: "fiction" },
-  cuentos: { gutenberg: "short stories", openlibrary: "short stories", standardebooks: "fiction" },
-  poesia: { gutenberg: "poetry", openlibrary: "poetry", standardebooks: "poetry" },
-  teatro: { gutenberg: "drama", openlibrary: "drama", standardebooks: "drama" },
-  ensayo: { gutenberg: "essays", openlibrary: "essays", standardebooks: "essays" },
+  ficcion: { gutenberg: "fiction", openlibrary: "fiction", standardebooks: "fiction", gutenbergEs: "novela español" },
+  novela: { gutenberg: "novel", openlibrary: "novel", standardebooks: "fiction", gutenbergEs: "novela español" },
+  cuentos: { gutenberg: "short stories", openlibrary: "short stories", standardebooks: "fiction", gutenbergEs: "cuentos español" },
+  poesia: { gutenberg: "poetry", openlibrary: "poetry", standardebooks: "poetry", gutenbergEs: "poesía español" },
+  teatro: { gutenberg: "drama", openlibrary: "drama", standardebooks: "drama", gutenbergEs: "teatro español" },
+  ensayo: { gutenberg: "essays", openlibrary: "essays", standardebooks: "essays", gutenbergEs: "ensayo español" },
   // Géneros narrativos
-  aventuras: { gutenberg: "adventure", openlibrary: "adventure", standardebooks: "adventure" },
-  misterio: { gutenberg: "detective", openlibrary: "mystery", standardebooks: "mystery" },
-  romance: { gutenberg: "romance", openlibrary: "romance", standardebooks: "romance" },
-  terror: { gutenberg: "horror", openlibrary: "horror", standardebooks: "horror" },
-  ciencia_ficcion: { gutenberg: "science fiction", openlibrary: "science fiction", standardebooks: "science fiction" },
-  fantasia: { gutenberg: "fantasy", openlibrary: "fantasy", standardebooks: "fantasy" },
-  humor: { gutenberg: "humor", openlibrary: "humor", standardebooks: "humor" },
+  aventuras: { gutenberg: "adventure", openlibrary: "adventure", standardebooks: "adventure", gutenbergEs: "aventura español" },
+  misterio: { gutenberg: "detective", openlibrary: "mystery", standardebooks: "mystery", gutenbergEs: "misterio español" },
+  romance: { gutenberg: "romance", openlibrary: "romance", standardebooks: "romance", gutenbergEs: "amor español" },
+  terror: { gutenberg: "horror", openlibrary: "horror", standardebooks: "horror", gutenbergEs: "terror español" },
+  ciencia_ficcion: { gutenberg: "science fiction", openlibrary: "science fiction", standardebooks: "science fiction", gutenbergEs: "ciencia ficción español" },
+  fantasia: { gutenberg: "fantasy", openlibrary: "fantasy", standardebooks: "fantasy", gutenbergEs: "fantasía español" },
+  humor: { gutenberg: "humor", openlibrary: "humor", standardebooks: "humor", gutenbergEs: "humor español" },
   // Conocimiento
-  filosofia: { gutenberg: "philosophy", openlibrary: "philosophy", standardebooks: "philosophy" },
-  historia: { gutenberg: "history", openlibrary: "history", standardebooks: "history" },
-  ciencia: { gutenberg: "science", openlibrary: "science", standardebooks: "science" },
-  religion: { gutenberg: "religion", openlibrary: "religion", standardebooks: "religion" },
-  biografia: { gutenberg: "biography", openlibrary: "biography", standardebooks: "biography" },
-  politica: { gutenberg: "politics", openlibrary: "politics", standardebooks: "politics" },
-  economia: { gutenberg: "economics", openlibrary: "economics", standardebooks: "economics" },
+  filosofia: { gutenberg: "philosophy", openlibrary: "philosophy", standardebooks: "philosophy", gutenbergEs: "filosofía español" },
+  historia: { gutenberg: "history", openlibrary: "history", standardebooks: "history", gutenbergEs: "historia español" },
+  ciencia: { gutenberg: "science", openlibrary: "science", standardebooks: "science", gutenbergEs: "ciencia español" },
+  religion: { gutenberg: "religion", openlibrary: "religion", standardebooks: "religion", gutenbergEs: "religión español" },
+  biografia: { gutenberg: "biography", openlibrary: "biography", standardebooks: "biography", gutenbergEs: "biografía español" },
+  politica: { gutenberg: "politics", openlibrary: "politics", standardebooks: "politics", gutenbergEs: "política español" },
+  economia: { gutenberg: "economics", openlibrary: "economics", standardebooks: "economics", gutenbergEs: "economía español" },
   // Especial
-  infantiles: { gutenberg: "children", openlibrary: "juvenile fiction", standardebooks: "children" },
-  juvenil: { gutenberg: "young adult", openlibrary: "young adult fiction", standardebooks: "young adult" },
-  viajes: { gutenberg: "travel", openlibrary: "travel", standardebooks: "travel" },
-  cocina: { gutenberg: "cooking", openlibrary: "cookery", standardebooks: "cooking" },
-  musica: { gutenberg: "music", openlibrary: "music", standardebooks: "music" },
-  arte: { gutenberg: "art", openlibrary: "art", standardebooks: "art" },
+  infantiles: { gutenberg: "children", openlibrary: "juvenile fiction", standardebooks: "children", gutenbergEs: "cuentos niños español" },
+  juvenil: { gutenberg: "young adult", openlibrary: "young adult fiction", standardebooks: "young adult", gutenbergEs: "juvenil español" },
+  viajes: { gutenberg: "travel", openlibrary: "travel", standardebooks: "travel", gutenbergEs: "viajes español" },
+  cocina: { gutenberg: "cooking", openlibrary: "cookery", standardebooks: "cooking", gutenbergEs: "cocina español" },
+  musica: { gutenberg: "music", openlibrary: "music", standardebooks: "music", gutenbergEs: "música español" },
+  arte: { gutenberg: "art", openlibrary: "art", standardebooks: "art", gutenbergEs: "arte español" },
 };
 
 /* Mapeo idioma UI → código por fuente */
@@ -175,7 +175,19 @@ async function searchOpenLibrary(
     });
     if (!res.ok) return [];
     const data = await res.json();
-    const results: Book[] = (data.docs || []).map((b: any) => {
+    // Filtrar resultados: si hay idioma seleccionado, excluir libros que NO lo tengan
+    // Para mayor precisión, exigimos que el idioma esté en la lista de idiomas del libro
+    const docsRaw: any[] = data.docs || [];
+    const docs = language && LANG_MAP[language]
+      ? docsRaw.filter((b: any) => {
+          const langs = b.language || [];
+          const targetLang = LANG_MAP[language].openlibrary;
+          // Si el libro no trae idioma, lo excluimos cuando hay filtro activo
+          if (langs.length === 0) return false;
+          return langs.includes(targetLang);
+        })
+      : docsRaw;
+    const results: Book[] = docs.map((b: any) => {
       const cover = b.cover_i
         ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg`
         : null;
@@ -195,7 +207,10 @@ async function searchOpenLibrary(
         title: b.title || "Sin título",
         author: (b.author_name || ["Autor desconocido"])[0],
         year: b.first_publish_year || null,
-        language: (b.language || [])[0] || null,
+        // Si hay idioma filtrado, mostrar ese; si no, el primero
+        language: language && LANG_MAP[language] && (b.language || []).includes(LANG_MAP[language].openlibrary)
+          ? LANG_MAP[language].openlibrary
+          : (b.language || [])[0] || null,
         subjects: (b.subject || []).slice(0, 6),
         cover,
         description: null,
@@ -507,7 +522,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ books: [], total: 0, query, page, source });
   }
 
-  const topic = category && CATEGORY_MAP[category] ? CATEGORY_MAP[category].gutenberg : undefined;
+  // Si el idioma es español, usar keywords en español para Gutenberg (mejor filtrado)
+  const catEntry = category && CATEGORY_MAP[category];
+  const topic = catEntry
+    ? (language === "es" && catEntry.gutenbergEs ? catEntry.gutenbergEs : catEntry.gutenberg)
+    : undefined;
 
   const tasks: Promise<Book[]>[] = [];
   if (source === "all" || source === "gutenberg")
