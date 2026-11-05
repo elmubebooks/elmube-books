@@ -190,17 +190,17 @@ def make_icon(size, filename, with_text=True, maskable=False):
     label += " + maskable" if maskable else ""
     print(f"  ✓ {filename} ({size}x{size}){label}")
 
-print("Generando iconos ELMUBE BOOKS (libro + texto):")
-make_icon(512, "icon-512.png", with_text=True)
-make_icon(512, "icon-512-maskable.png", with_text=True, maskable=True)
-make_icon(192, "icon-192.png", with_text=True)
-make_icon(192, "icon-192-maskable.png", with_text=True, maskable=True)
-make_icon(180, "apple-touch-icon.png", with_text=True)
+print("Generando iconos ELMUBE BOOKS (solo libro, sin texto):")
+make_icon(512, "icon-512.png", with_text=False)
+make_icon(512, "icon-512-maskable.png", with_text=False, maskable=True)
+make_icon(192, "icon-192.png", with_text=False)
+make_icon(192, "icon-192-maskable.png", with_text=False, maskable=True)
+make_icon(180, "apple-touch-icon.png", with_text=False)
 # Para tamaños pequeños, solo libro (mejor legibilidad)
 make_icon(32, "favicon-32.png", with_text=False)
 make_icon(16, "favicon-16.png", with_text=False)
 
-# SVG: libro abierto + texto ELMUBE BOOKS
+# SVG: solo libro abierto, sin texto (más limpio, sin problemas de corte)
 svg = """<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
@@ -221,28 +221,26 @@ svg = """<?xml version="1.0" encoding="UTF-8"?>
   <rect x="12" y="12" width="488" height="488" fill="none" stroke="#d4a55f" stroke-width="10"/>
 
   <!-- Sombra del libro -->
-  <g transform="translate(8 8)" opacity="0.5">
-    <path d="M 96 130 L 256 170 L 416 130 L 416 320 L 256 290 L 96 320 Z" fill="#1e1206"/>
+  <g transform="translate(10 10)" opacity="0.5">
+    <path d="M 76 110 L 256 160 L 436 110 L 436 340 L 256 300 L 76 340 Z" fill="#1e1206"/>
   </g>
 
-  <!-- Libro abierto -->
-  <path d="M 96 130 L 256 170 L 256 290 L 96 320 Z" fill="url(#page)" stroke="#d4a55f" stroke-width="6"/>
-  <path d="M 256 170 L 416 130 L 416 320 L 256 290 Z" fill="url(#page)" stroke="#d4a55f" stroke-width="6"/>
-  <line x1="256" y1="170" x2="256" y2="290" stroke="#d4a55f" stroke-width="6"/>
+  <!-- Libro abierto (más grande, centrado) -->
+  <path d="M 76 110 L 256 160 L 256 300 L 76 340 Z" fill="url(#page)" stroke="#d4a55f" stroke-width="8"/>
+  <path d="M 256 160 L 436 110 L 436 340 L 256 300 Z" fill="url(#page)" stroke="#d4a55f" stroke-width="8"/>
+  <line x1="256" y1="160" x2="256" y2="300" stroke="#d4a55f" stroke-width="8"/>
 
   <!-- Líneas de texto (página izquierda) -->
-  <line x1="130" y1="210" x2="240" y2="240" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
-  <line x1="130" y1="250" x2="240" y2="265" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
-  <line x1="130" y1="290" x2="240" y2="290" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
+  <line x1="110" y1="190" x2="240" y2="225" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="110" y1="230" x2="240" y2="250" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="110" y1="270" x2="240" y2="275" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="110" y1="310" x2="240" y2="300" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
 
   <!-- Líneas de texto (página derecha) -->
-  <line x1="272" y1="240" x2="382" y2="210" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
-  <line x1="272" y1="265" x2="382" y2="250" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
-  <line x1="272" y1="290" x2="382" y2="290" stroke="#7a4e29" stroke-width="4" stroke-linecap="round"/>
-
-  <!-- Texto ELMUBE BOOKS - fuente más pequeña para que no se corte -->
-  <text x="256" y="400" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#fcf5e6" text-anchor="middle" letter-spacing="1">ELMUBE</text>
-  <text x="256" y="455" font-family="Georgia, 'Times New Roman', serif" font-size="44" font-weight="bold" fill="#d4a55f" text-anchor="middle" letter-spacing="1">BOOKS</text>
+  <line x1="272" y1="225" x2="402" y2="190" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="272" y1="250" x2="402" y2="230" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="272" y1="275" x2="402" y2="270" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
+  <line x1="272" y1="300" x2="402" y2="310" stroke="#7a4e29" stroke-width="5" stroke-linecap="round"/>
 </svg>
 """
 with open(os.path.join(OUT, "icon.svg"), "w") as f:

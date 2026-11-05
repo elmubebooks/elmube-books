@@ -359,10 +359,12 @@ async function searchArchive(query: string, page: number, limit: number, languag
       return data?.response?.docs || [];
     };
 
-    // Lanzar ambas búsquedas en paralelo
+    // Lanzar búsquedas en paralelo
+    // Solo buscar audiolibros cuando hay un query explícito del usuario
+    // (no en carruseles por categoría, que traen audios aleatorios no literarios)
     const [textDocs, audioDocs] = await Promise.all([
       fetchDocs("texts"),
-      fetchDocs("audio"),
+      query ? fetchDocs("audio") : Promise.resolve([] as any[]),
     ]);
     // Combinar: primero audiolibros, luego textos
     const docs = [...audioDocs, ...textDocs].slice(0, limit * 2);
@@ -447,7 +449,9 @@ async function searchArchive(query: string, page: number, limit: number, languag
             year: m.year ? parseInt(String(m.year).slice(0, 4), 10) || null : null,
             language: Array.isArray(m.language) ? m.language[0] : m.language || null,
             subjects: Array.isArray(m.collection) ? m.collection.slice(0, 4) : [],
-            cover: `https://archive.org/services/img/${id}`,
+            // Para audiolibros: no usar la portada de Archive (suele ser ondas de voz)
+            // Usar null para que el fallback de audífonos se muestre en la UI
+            cover: isAudiobook ? null : `https://archive.org/services/img/${id}`,
             description: Array.isArray(m.description) ? m.description[0]?.slice(0, 400) : (m.description || null),
             source: isAudiobook ? "librivox" : "archive",
             downloads,
