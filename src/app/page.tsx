@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search,
   BookOpen,
@@ -38,8 +38,15 @@ import {
   Headphones,
   Play,
   Pause,
+  Mic,
+  MicOff,
+  BookText,
+  ChevronLeft,
+  ChevronRight,
+  X as XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -354,6 +361,27 @@ const COUNTRY_NAMES: Record<string, string> = {
   "🇪🇸": "España",
 };
 
+// Gradientes de color por país para las tarjetas de autores
+const COUNTRY_GRADIENTS: Record<string, string> = {
+  "🇲🇽": "from-green-600 via-white to-red-600",       // México: verde-blanco-rojo
+  "🇦🇷": "from-sky-400 via-white to-sky-600",          // Argentina: celeste-blanco
+  "🇺🇾": "from-blue-500 via-white to-blue-700",        // Uruguay
+  "🇳🇮": "from-blue-400 via-white to-blue-600",        // Nicaragua
+  "🇨🇴": "from-yellow-400 via-blue-600 to-red-600",    // Colombia
+  "🇨🇺": "from-blue-500 via-white to-red-500",         // Cuba
+  "🇵🇪": "from-red-500 via-white to-red-700",          // Perú
+  "🇻🇪": "from-yellow-400 via-blue-700 to-red-600",    // Venezuela
+  "🇨🇱": "from-blue-700 via-white to-red-600",         // Chile
+  "🇬🇹": "from-sky-400 via-white to-sky-600",          // Guatemala
+  "🇧🇴": "from-red-500 via-yellow-400 to-green-600",   // Bolivia
+  "🇪🇨": "from-yellow-400 via-blue-600 to-red-500",    // Ecuador
+  "🇵🇾": "from-red-500 via-white to-blue-600",         // Paraguay
+  "🇵🇷": "from-red-500 via-white to-blue-600",         // Puerto Rico
+  "🇩🇴": "from-blue-500 via-white to-red-500",         // Rep. Dominicana
+  "🇧🇷": "from-green-500 via-yellow-400 to-blue-500",  // Brasil
+  "🇪🇸": "from-red-600 via-yellow-500 to-red-700",     // España: rojo-amarillo
+};
+
 type View = "home" | "results" | "favorites" | "history" | "categories";
 
 export default function Home() {
@@ -391,6 +419,9 @@ export default function Home() {
   const [authorsDropdownOpen, setAuthorsDropdownOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [epubReaderBook, setEpubReaderBook] = useState<Book | null>(null);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -425,6 +456,63 @@ export default function Home() {
       toast({ title: "¡App instalada!", description: "Encuéntrala en tu pantalla de inicio" });
     }
     setInstallPromptEvent(null);
+  };
+
+  /* ----- Búsqueda por voz ----- */
+  const toggleVoiceSearch = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({
+        title: "No soportado",
+        description: "Tu navegador no soporta búsqueda por voz. Prueba Chrome.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isListening && recognition) {
+      recognition.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "es-ES";
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.onstart = () => {
+      setIsListening(true);
+      toast({ title: "🎤 Escuchando…", description: "Di el título o autor del libro" });
+    };
+
+    rec.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.trim();
+      setQuery(transcript);
+      setActiveQuery(transcript);
+      setCategory("");
+      setView("results");
+      search(transcript, source, language, "");
+    };
+
+    rec.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error === "not-allowed") {
+        toast({ title: "Permiso denegado", description: "Activa el micrófono en tu navegador", variant: "destructive" });
+      } else if (event.error === "no-speech") {
+        toast({ title: "No te escuché", description: "Intenta hablar más fuerte" });
+      } else {
+        toast({ title: "Error", description: "No se pudo reconocer la voz", variant: "destructive" });
+      }
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+    };
+
+    setRecognition(rec);
+    rec.start();
   };
 
   /* ----- Cargar carruseles de la home (libros destacados por categoría) ----- */
@@ -884,9 +972,23 @@ export default function Home() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por título, autor o tema…"
-                className="pl-9 pr-3 h-10 font-sans"
+                className="pl-9 pr-10 h-10 font-sans"
                 aria-label="Buscar libros"
               />
+              {/* Botón micrófono dentro del input */}
+              <button
+                type="button"
+                onClick={toggleVoiceSearch}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                  isListening
+                    ? "bg-red-500 text-white animate-pulse"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+                aria-label={isListening ? "Detener escucha" : "Buscar por voz"}
+                title={isListening ? "Detener escucha" : "Buscar por voz"}
+              >
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              </button>
             </div>
             {/* Selector de idioma - desktop */}
             <div className="hidden sm:flex items-center">
@@ -1102,8 +1204,16 @@ export default function Home() {
       </header>
 
       {/* ===== Home con carruseles tipo Netflix ===== */}
+      <AnimatePresence mode="wait">
       {view === "home" && (
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <motion.main
+          key="home"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6"
+        >
           {/* Hero compacto */}
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-3">
@@ -1130,21 +1240,34 @@ export default function Home() {
               <span className="text-xs text-muted-foreground">(dominio público)</span>
             </div>
             <div className="flex gap-2 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4 sm:mx-0 sm:px-1">
-              {LATIN_AUTHORS.map((author) => (
-                <button
-                  key={author.name}
-                  onClick={() => onAuthorClick(author.query)}
-                  className="flex-shrink-0 min-w-[140px] max-w-[180px] p-3 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{author.country}</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">{author.years}</span>
-                  </div>
-                  <p className="font-serif text-sm font-semibold leading-tight line-clamp-2">
-                    {author.name}
-                  </p>
-                </button>
-              ))}
+              {LATIN_AUTHORS.map((author) => {
+                // Asignar color de gradiente según país
+                const gradient = COUNTRY_GRADIENTS[author.country] || "from-amber-500 to-orange-600";
+                return (
+                  <button
+                    key={author.name + author.country}
+                    onClick={() => onAuthorClick(author.query)}
+                    className={`flex-shrink-0 min-w-[140px] max-w-[180px] p-3 rounded-lg border border-white/10 bg-gradient-to-br ${gradient} hover:scale-105 hover:shadow-lg transition-all text-left relative overflow-hidden group`}
+                  >
+                    {/* Decoración de fondo */}
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-500" />
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-black/10 rounded-full -ml-6 -mb-6" />
+
+                    {/* Contenido */}
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl drop-shadow-sm">{author.country}</span>
+                        <span className="text-[10px] text-white/80 font-mono bg-black/20 px-1.5 py-0.5 rounded">
+                          {author.years}
+                        </span>
+                      </div>
+                      <p className="font-serif text-sm font-semibold leading-tight line-clamp-2 text-white drop-shadow">
+                        {author.name}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1188,8 +1311,9 @@ export default function Home() {
               })}
             </div>
           )}
-        </main>
+        </motion.main>
       )}
+      </AnimatePresence>
 
       {/* ===== Vista de categorías (grid grande) ===== */}
       {view === "categories" && (
@@ -1232,8 +1356,16 @@ export default function Home() {
       )}
 
       {/* ===== Resultados / Favoritos / Historial ===== */}
+      <AnimatePresence mode="wait">
       {(view === "results" || view === "favorites" || view === "history") && (
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+        <motion.main
+          key={view}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25 }}
+          className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6"
+        >
           {/* Barra superior con botón volver + título + total */}
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -1391,8 +1523,9 @@ export default function Home() {
               </div>
             </>
           )}
-        </main>
+        </motion.main>
       )}
+      </AnimatePresence>
 
       {/* ===== Footer con sección de donativo ===== */}
       <footer className="mt-auto border-t border-border bg-card/50">
@@ -1613,6 +1746,21 @@ export default function Home() {
                     }}
                   >
                     <Eye className="w-4 h-4 mr-1.5" /> Ver vista previa del texto
+                  </Button>
+                )}
+
+                {/* Botón Leer EPUB (si hay descarga EPUB) */}
+                {selected.downloads.some((d) => d.label === "EPUB") && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => {
+                      setEpubReaderBook(selected);
+                      setSelected(null);
+                    }}
+                  >
+                    <BookText className="w-4 h-4 mr-1.5" /> Leer EPUB en la app
                   </Button>
                 )}
 
@@ -1976,6 +2124,16 @@ export default function Home() {
         </div>
       )}
 
+      {/* ===== Lector EPUB integrado ===== */}
+      {epubReaderBook && (
+        <EpubReader
+          book={epubReaderBook}
+          onClose={() => setEpubReaderBook(null)}
+          onFavToggle={() => toggleFav(epubReaderBook)}
+          isFav={isFav(epubReaderBook.id)}
+        />
+      )}
+
       <Toaster />
     </div>
   );
@@ -2055,6 +2213,240 @@ function CategoryCarousel({
         ))}
       </div>
     </section>
+  );
+}
+
+/* ====== Lector EPUB integrado con epub.js ====== */
+function EpubReader({
+  book,
+  onClose,
+  onFavToggle,
+  isFav,
+}: {
+  book: Book;
+  onClose: () => void;
+  onFavToggle: () => void;
+  isFav: boolean;
+}) {
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const renditionRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [fontSize, setFontSize] = useState(100);
+  const [theme, setTheme] = useState<"light" | "sepia" | "dark">("light");
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadEpub = async () => {
+      try {
+        // Encontrar la URL del EPUB
+        const epubDownload = book.downloads.find((d) => d.label === "EPUB");
+        if (!epubDownload) {
+          setError("No hay archivo EPUB disponible para este libro.");
+          setLoading(false);
+          return;
+        }
+
+        // Cargar epub.js dinámicamente
+        const ePub = (await import("epubjs")).default;
+        if (!viewerRef.current || cancelled) return;
+
+        // Crear el libro desde la URL
+        const bookInstance = ePub(epubDownload.url);
+        const rendition = bookInstance.renderTo(viewerRef.current, {
+          width: "100%",
+          height: "100%",
+          spread: "none",
+          flow: "paginated",
+        });
+        renditionRef.current = rendition;
+
+        // Mostrar el libro
+        await rendition.display();
+
+        // Tema inicial
+        applyTheme(rendition, "light", fontSize);
+
+        // Evento de progreso de lectura
+        bookInstance.ready.then(() => {
+          const locations = bookInstance.locations.generate(1024);
+          return locations;
+        }).then(() => {
+          if (cancelled) return;
+          // Habilitar navegación por ubicaciones
+        });
+
+        // Actualizar progreso al cambiar de página
+        rendition.on("relocated", (location: any) => {
+          if (location?.start?.percentage) {
+            setProgress(Math.round(location.start.percentage * 100));
+          }
+        });
+
+        if (!cancelled) setLoading(false);
+      } catch (e: any) {
+        console.error("EPUB load error:", e);
+        if (!cancelled) {
+          setError("No se pudo cargar el EPUB. Puede que el archivo no esté disponible o el navegador bloquee la descarga.");
+          setLoading(false);
+        }
+      }
+    };
+    loadEpub();
+
+    return () => {
+      cancelled = true;
+      if (renditionRef.current) {
+        try {
+          renditionRef.current.destroy();
+        } catch {}
+      }
+    };
+  }, [book]);
+
+  const applyTheme = (rendition: any, themeName: string, size: number) => {
+    const themes: Record<string, any> = {
+      light: { body: { background: "#fff", color: "#1a1a1a" } },
+      sepia: { body: { background: "#f4ecd8", color: "#5b4636" } },
+      dark: { body: { background: "#1a1a1a", color: "#e0e0e0" } },
+    };
+    rendition.themes.register("custom", themes[themeName]);
+    rendition.themes.select("custom");
+    rendition.themes.fontSize(`${size}%`);
+  };
+
+  const changeTheme = (newTheme: "light" | "sepia" | "dark") => {
+    setTheme(newTheme);
+    if (renditionRef.current) {
+      applyTheme(renditionRef.current, newTheme, fontSize);
+    }
+  };
+
+  const changeFontSize = (delta: number) => {
+    const newSize = Math.max(70, Math.min(200, fontSize + delta));
+    setFontSize(newSize);
+    if (renditionRef.current) {
+      renditionRef.current.themes.fontSize(`${newSize}%`);
+    }
+  };
+
+  const nextPage = () => renditionRef.current?.next();
+  const prevPage = () => renditionRef.current?.prev();
+
+  const bgClass = theme === "light" ? "bg-white" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-[#1a1a1a]";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-background">
+      {/* Barra superior */}
+      <header className={`flex items-center justify-between gap-2 p-3 border-b ${bgClass} border-border`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary flex-shrink-0"
+            aria-label="Cerrar lector"
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+          <div className="min-w-0">
+            <p className="font-serif text-sm font-semibold truncate">{book.title}</p>
+            <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Favorito */}
+          <button
+            onClick={onFavToggle}
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary"
+            aria-label={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
+          >
+            <Heart className={`w-4 h-4 ${isFav ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+          </button>
+          {/* Tamaño fuente */}
+          <button
+            onClick={() => changeFontSize(-10)}
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary text-sm font-bold"
+            aria-label="Reducir texto"
+            title="Texto más pequeño"
+          >
+            A-
+          </button>
+          <button
+            onClick={() => changeFontSize(10)}
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary text-sm font-bold"
+            aria-label="Aumentar texto"
+            title="Texto más grande"
+          >
+            A+
+          </button>
+          {/* Tema */}
+          <button
+            onClick={() => changeTheme(theme === "light" ? "sepia" : theme === "sepia" ? "dark" : "light")}
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary"
+            aria-label="Cambiar tema"
+            title={`Tema: ${theme === "light" ? "Claro" : theme === "sepia" ? "Sepia" : "Oscuro"}`}
+          >
+            {theme === "light" ? "☀" : theme === "sepia" ? "📜" : "🌙"}
+          </button>
+        </div>
+      </header>
+
+      {/* Contenido del EPUB */}
+      <div className={`flex-1 relative ${bgClass}`}>
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Cargando libro…</p>
+          </div>
+        )}
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <BookText className="w-10 h-10 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Volver
+            </Button>
+          </div>
+        )}
+        <div
+          ref={viewerRef}
+          className="w-full h-full epub-viewer"
+          style={{ display: loading || error ? "none" : "block" }}
+        />
+      </div>
+
+      {/* Barra inferior: navegación + progreso */}
+      <footer className={`flex items-center justify-between gap-2 p-3 border-t ${bgClass} border-border`}>
+        <button
+          onClick={prevPage}
+          className="flex items-center gap-1 px-3 h-9 rounded-md hover:bg-secondary text-sm font-medium"
+          aria-label="Página anterior"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Anterior</span>
+        </button>
+
+        {/* Barra de progreso */}
+        <div className="flex-1 flex items-center gap-2 max-w-xs">
+          <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground w-10 text-right">{progress}%</span>
+        </div>
+
+        <button
+          onClick={nextPage}
+          className="flex items-center gap-1 px-3 h-9 rounded-md hover:bg-secondary text-sm font-medium"
+          aria-label="Página siguiente"
+        >
+          <span className="hidden sm:inline">Siguiente</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </footer>
+    </div>
   );
 }
 
