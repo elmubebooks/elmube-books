@@ -2238,6 +2238,8 @@ function EpubReader({
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: any = null;
+
     const loadEpub = async () => {
       try {
         // Encontrar la URL del EPUB
@@ -2248,12 +2250,40 @@ function EpubReader({
           return;
         }
 
+        // Timeout de 10 segundos: si no carga, mostrar error
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            setError(
+              "No se pudo cargar el EPUB en el lector. El servidor no permite lectura directa (CORS). " +
+              "Puedes descargar el archivo EPUB y abrirlo con una app externa como Google Play Books o Apple Books."
+            );
+            setLoading(false);
+            if (renditionRef.current) {
+              try { renditionRef.current.destroy(); } catch {}
+            }
+          }
+        }, 10000);
+
         // Cargar epub.js dinámicamente
         const ePub = (await import("epubjs")).default;
         if (!viewerRef.current || cancelled) return;
 
-        // Crear el libro desde la URL
+        // Intentar cargar directamente primero
+        // Si falla por CORS, el timeout mostrará el error
         const bookInstance = ePub(epubDownload.url);
+
+        // Manejar errores del libro
+        bookInstance.on("openFailed", (err: any) => {
+          if (!cancelled) {
+            clearTimeout(timeoutId);
+            setError(
+              "No se pudo abrir el EPUB. El archivo puede no estar disponible o el servidor bloquea el acceso. " +
+              "Te recomendamos descargar el archivo y abrirlo con una app de lectura externa."
+            );
+            setLoading(false);
+          }
+        });
+
         const rendition = bookInstance.renderTo(viewerRef.current, {
           width: "100%",
           height: "100%",
@@ -2265,17 +2295,11 @@ function EpubReader({
         // Mostrar el libro
         await rendition.display();
 
+        // Si llegó aquí, el libro cargó → cancelar timeout
+        clearTimeout(timeoutId);
+
         // Tema inicial
         applyTheme(rendition, "light", fontSize);
-
-        // Evento de progreso de lectura
-        bookInstance.ready.then(() => {
-          const locations = bookInstance.locations.generate(1024);
-          return locations;
-        }).then(() => {
-          if (cancelled) return;
-          // Habilitar navegación por ubicaciones
-        });
 
         // Actualizar progreso al cambiar de página
         rendition.on("relocated", (location: any) => {
@@ -2288,7 +2312,11 @@ function EpubReader({
       } catch (e: any) {
         console.error("EPUB load error:", e);
         if (!cancelled) {
-          setError("No se pudo cargar el EPUB. Puede que el archivo no esté disponible o el navegador bloquee la descarga.");
+          clearTimeout(timeoutId);
+          setError(
+            "No se pudo cargar el EPUB. El servidor no permite lectura directa desde el navegador. " +
+            "Descarga el archivo EPUB y ábrelo con una app de lectura."
+          );
           setLoading(false);
         }
       }
@@ -2297,10 +2325,9 @@ function EpubReader({
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       if (renditionRef.current) {
-        try {
-          renditionRef.current.destroy();
-        } catch {}
+        try { renditionRef.current.destroy(); } catch {}
       }
     };
   }, [book]);
@@ -2335,37 +2362,40 @@ function EpubReader({
   const prevPage = () => renditionRef.current?.prev();
 
   const bgClass = theme === "light" ? "bg-white" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-[#1a1a1a]";
+  const textColor = theme === "dark" ? "text-white" : "text-gray-900";
+  const mutedColor = theme === "dark" ? "text-gray-400" : "text-gray-600";
+  const hoverBg = theme === "dark" ? "hover:bg-white/10" : "hover:bg-black/10";
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-background">
       {/* Barra superior */}
-      <header className={`flex items-center justify-between gap-2 p-3 border-b ${bgClass} border-border`}>
+      <header className={`flex items-center justify-between gap-2 p-3 border-b ${bgClass} border-gray-300 ${textColor}`}>
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary flex-shrink-0"
+            className={`flex items-center justify-center w-9 h-9 rounded-md ${hoverBg} ${textColor} flex-shrink-0 transition-colors`}
             aria-label="Cerrar lector"
           >
             <XIcon className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <p className="font-serif text-sm font-semibold truncate">{book.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{book.author}</p>
+            <p className={`font-serif text-sm font-semibold truncate ${textColor}`}>{book.title}</p>
+            <p className={`text-xs ${mutedColor} truncate`}>{book.author}</p>
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Favorito */}
           <button
             onClick={onFavToggle}
-            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary"
+            className={`flex items-center justify-center w-9 h-9 rounded-md ${hoverBg} transition-colors`}
             aria-label={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
           >
-            <Heart className={`w-4 h-4 ${isFav ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+            <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : mutedColor}`} />
           </button>
           {/* Tamaño fuente */}
           <button
             onClick={() => changeFontSize(-10)}
-            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary text-sm font-bold"
+            className={`flex items-center justify-center w-9 h-9 rounded-md ${hoverBg} ${textColor} text-sm font-bold transition-colors`}
             aria-label="Reducir texto"
             title="Texto más pequeño"
           >
@@ -2373,7 +2403,7 @@ function EpubReader({
           </button>
           <button
             onClick={() => changeFontSize(10)}
-            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary text-sm font-bold"
+            className={`flex items-center justify-center w-9 h-9 rounded-md ${hoverBg} ${textColor} text-sm font-bold transition-colors`}
             aria-label="Aumentar texto"
             title="Texto más grande"
           >
@@ -2382,11 +2412,11 @@ function EpubReader({
           {/* Tema */}
           <button
             onClick={() => changeTheme(theme === "light" ? "sepia" : theme === "sepia" ? "dark" : "light")}
-            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-secondary"
+            className={`flex items-center justify-center w-9 h-9 rounded-md ${hoverBg} ${textColor} transition-colors`}
             aria-label="Cambiar tema"
             title={`Tema: ${theme === "light" ? "Claro" : theme === "sepia" ? "Sepia" : "Oscuro"}`}
           >
-            {theme === "light" ? "☀" : theme === "sepia" ? "📜" : "🌙"}
+            {theme === "light" ? "☀️" : theme === "sepia" ? "📜" : "🌙"}
           </button>
         </div>
       </header>
@@ -2416,10 +2446,10 @@ function EpubReader({
       </div>
 
       {/* Barra inferior: navegación + progreso */}
-      <footer className={`flex items-center justify-between gap-2 p-3 border-t ${bgClass} border-border`}>
+      <footer className={`flex items-center justify-between gap-2 p-3 border-t ${bgClass} border-gray-300 ${textColor}`}>
         <button
           onClick={prevPage}
-          className="flex items-center gap-1 px-3 h-9 rounded-md hover:bg-secondary text-sm font-medium"
+          className={`flex items-center gap-1 px-3 h-9 rounded-md ${hoverBg} ${textColor} text-sm font-medium transition-colors`}
           aria-label="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -2428,18 +2458,18 @@ function EpubReader({
 
         {/* Barra de progreso */}
         <div className="flex-1 flex items-center gap-2 max-w-xs">
-          <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div className={`flex-1 h-1.5 ${theme === "dark" ? "bg-white/20" : "bg-black/10"} rounded-full overflow-hidden`}>
             <div
-              className="h-full bg-primary transition-all"
+              className={`h-full ${theme === "dark" ? "bg-amber-400" : "bg-amber-600"} transition-all`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground w-10 text-right">{progress}%</span>
+          <span className={`text-xs ${mutedColor} w-10 text-right`}>{progress}%</span>
         </div>
 
         <button
           onClick={nextPage}
-          className="flex items-center gap-1 px-3 h-9 rounded-md hover:bg-secondary text-sm font-medium"
+          className={`flex items-center gap-1 px-3 h-9 rounded-md ${hoverBg} ${textColor} text-sm font-medium transition-colors`}
           aria-label="Página siguiente"
         >
           <span className="hidden sm:inline">Siguiente</span>
