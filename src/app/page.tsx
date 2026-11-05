@@ -639,9 +639,9 @@ export default function Home() {
           >
             <Menu className="w-4 h-4" />
           </button>
-          {/* Selector idioma compacto */}
+          {/* Selector idioma */}
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-[90px] text-xs flex-shrink-0">
+            <SelectTrigger className="h-8 w-[115px] text-xs flex-shrink-0">
               <Globe className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
@@ -667,171 +667,6 @@ export default function Home() {
             </button>
           ))}
         </div>
-
-        {/* Menú hamburguesa móvil (overlay) */}
-        {mobileMenuOpen && (
-          <div
-            className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <div
-              className="absolute top-0 right-0 bottom-0 w-72 max-w-[80vw] bg-background border-l border-border shadow-2xl flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-border">
-                <h3 className="font-serif text-lg font-semibold">Menú</h3>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-8 h-8 rounded-md hover:bg-secondary flex items-center justify-center"
-                  aria-label="Cerrar menú"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto scroll-elegant p-3 space-y-1">
-                {/* Inicio */}
-                <button
-                  onClick={() => {
-                    setView("home");
-                    setActiveQuery("");
-                    setCategory("");
-                    setQuery("");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
-                    view === "home" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                  }`}
-                >
-                  <HomeIcon className="w-4 h-4" />
-                  <span>Inicio</span>
-                </button>
-
-                {/* Categorías */}
-                <button
-                  onClick={() => {
-                    setView("categories");
-                    setActiveQuery("");
-                    setCategory("");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
-                    view === "categories" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                  }`}
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                  <span>Categorías</span>
-                </button>
-
-                {/* Historial */}
-                <button
-                  onClick={() => {
-                    setView("history");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
-                    view === "history" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <History className="w-4 h-4" />
-                    <span>Historial</span>
-                  </div>
-                  {history.length > 0 && (
-                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
-                      {history.length > 9 ? "9+" : history.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Favoritos */}
-                <button
-                  onClick={() => {
-                    setView("favorites");
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
-                    view === "favorites" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Bookmark className="w-4 h-4" />
-                    <span>Favoritos</span>
-                  </div>
-                  {favorites.length > 0 && (
-                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
-                      {favorites.length > 9 ? "9+" : favorites.length}
-                    </span>
-                  )}
-                </button>
-
-                <div className="h-px bg-border my-2" />
-
-                {/* Modo oscuro */}
-                <button
-                  onClick={toggleDark}
-                  className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
-                >
-                  {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                  <span>{dark ? "Modo claro" : "Modo oscuro"}</span>
-                </button>
-
-                {/* Me gusta */}
-                <button
-                  onClick={toggleLike}
-                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
-                    liked ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ThumbsUp className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
-                    <span>{liked ? "Te gusta esta app" : "Me gusta"}</span>
-                  </div>
-                  {likeCount > 0 && (
-                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
-                      {likeCount > 99 ? "99+" : likeCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Instalar */}
-                {installPromptEvent && !isInstalled && (
-                  <button
-                    onClick={() => {
-                      handleInstallClick();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-semibold"
-                  >
-                    <DownloadCloud className="w-4 h-4" />
-                    <span>Instalar app</span>
-                  </button>
-                )}
-
-                <div className="h-px bg-border my-2" />
-
-                {/* Donativo */}
-                <button
-                  onClick={() => {
-                    setShowDonativo(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
-                >
-                  <Gift className="w-4 h-4 text-accent" />
-                  <span>Donativo</span>
-                </button>
-              </div>
-
-              <div className="p-4 border-t border-border text-center">
-                <p className="font-serif text-sm font-semibold">ELMUBE BOOKS</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Libros libres de dominio público
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Indicador de idioma activo (solo en resultados, si hay filtro) */}
         {view === "results" && language !== "all" && (
@@ -865,61 +700,11 @@ export default function Home() {
               <br />
               <span className="text-primary">libros de dominio público</span>
             </h2>
-            <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-xl mx-auto">
+            <p className="text-muted-foreground text-base sm:text-lg mb-12 max-w-xl mx-auto">
               Una sola búsqueda en Project Gutenberg, Open Library y Standard Ebooks.
               Descarga en EPUB, PDF, TXT, HTML o Kindle — totalmente gratis y legal.
             </p>
 
-            {/* Categorías destacadas - carrusel horizontal en móvil, grid en desktop */}
-            <div className="mb-12">
-              <h3 className="font-serif text-xl font-semibold mb-4 flex items-center justify-center gap-2">
-                <Tag className="w-5 h-5" /> Explora por categoría
-              </h3>
-              {/* Móvil: carrusel horizontal scrollable */}
-              <div className="sm:hidden flex gap-2 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => onCategoryClick(c.value)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left flex-shrink-0 whitespace-nowrap"
-                  >
-                    <span className="text-lg">{c.icon}</span>
-                    <span className="text-sm font-medium">{c.label}</span>
-                  </button>
-                ))}
-              </div>
-              {/* Desktop: grid */}
-              <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => onCategoryClick(c.value)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left"
-                  >
-                    <span className="text-lg">{c.icon}</span>
-                    <span className="text-sm font-medium">{c.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-              <FeatureCard
-                icon={<Library className="w-5 h-5" />}
-                title="3 fuentes en 1"
-                desc="Gutenberg, Open Library y Standard Ebooks unificados."
-              />
-              <FeatureCard
-                icon={<Download className="w-5 h-5" />}
-                title="Descarga directa"
-                desc="EPUB, PDF, TXT, HTML, Kindle — sin registros ni anuncios."
-              />
-              <FeatureCard
-                icon={<Eye className="w-5 h-5" />}
-                title="Vista previa"
-                desc="Lee un fragmento antes de descargar el libro completo."
-              />
-            </div>
           </div>
         </section>
       )}
@@ -1511,6 +1296,171 @@ export default function Home() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ===== Menú hamburguesa móvil (overlay fuera del header) ===== */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="absolute top-0 right-0 bottom-0 w-72 max-w-[80vw] bg-background border-l border-border shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-serif text-lg font-semibold">Menú</h3>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-8 h-8 rounded-md hover:bg-secondary flex items-center justify-center"
+                aria-label="Cerrar menú"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto scroll-elegant p-3 space-y-1">
+              {/* Inicio */}
+              <button
+                onClick={() => {
+                  setView("home");
+                  setActiveQuery("");
+                  setCategory("");
+                  setQuery("");
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                  view === "home" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+              >
+                <HomeIcon className="w-4 h-4" />
+                <span>Inicio</span>
+              </button>
+
+              {/* Categorías */}
+              <button
+                onClick={() => {
+                  setView("categories");
+                  setActiveQuery("");
+                  setCategory("");
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                  view === "categories" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+              >
+                <Grid3x3 className="w-4 h-4" />
+                <span>Categorías</span>
+              </button>
+
+              {/* Historial */}
+              <button
+                onClick={() => {
+                  setView("history");
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                  view === "history" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <History className="w-4 h-4" />
+                  <span>Historial</span>
+                </div>
+                {history.length > 0 && (
+                  <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                    {history.length > 9 ? "9+" : history.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Favoritos */}
+              <button
+                onClick={() => {
+                  setView("favorites");
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                  view === "favorites" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Bookmark className="w-4 h-4" />
+                  <span>Favoritos</span>
+                </div>
+                {favorites.length > 0 && (
+                  <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                    {favorites.length > 9 ? "9+" : favorites.length}
+                  </span>
+                )}
+              </button>
+
+              <div className="h-px bg-border my-2" />
+
+              {/* Modo oscuro */}
+              <button
+                onClick={toggleDark}
+                className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                <span>{dark ? "Modo claro" : "Modo oscuro"}</span>
+              </button>
+
+              {/* Me gusta */}
+              <button
+                onClick={toggleLike}
+                className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                  liked ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <ThumbsUp className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
+                  <span>{liked ? "Te gusta esta app" : "Me gusta"}</span>
+                </div>
+                {likeCount > 0 && (
+                  <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                    {likeCount > 99 ? "99+" : likeCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Instalar */}
+              {installPromptEvent && !isInstalled && (
+                <button
+                  onClick={() => {
+                    handleInstallClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-semibold"
+                >
+                  <DownloadCloud className="w-4 h-4" />
+                  <span>Instalar app</span>
+                </button>
+              )}
+
+              <div className="h-px bg-border my-2" />
+
+              {/* Donativo */}
+              <button
+                onClick={() => {
+                  setShowDonativo(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                <Gift className="w-4 h-4 text-accent" />
+                <span>Donativo</span>
+              </button>
+            </div>
+
+            <div className="p-4 border-t border-border text-center">
+              <p className="font-serif text-sm font-semibold">ELMUBE BOOKS</p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Libros libres de dominio público
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toaster />
     </div>
