@@ -188,15 +188,29 @@ async function searchOpenLibrary(
     // Filtrar resultados: si hay idioma seleccionado, excluir libros que NO lo tengan
     // Para mayor precisión, exigimos que el idioma esté en la lista de idiomas del libro
     const docsRaw: any[] = data.docs || [];
-    const docs = language && LANG_MAP[language]
+
+    // Filtrar por idioma si se especifica
+    let docs = language && LANG_MAP[language]
       ? docsRaw.filter((b: any) => {
           const langs = b.language || [];
           const targetLang = LANG_MAP[language].openlibrary;
-          // Si el libro no trae idioma, lo excluimos cuando hay filtro activo
           if (langs.length === 0) return false;
           return langs.includes(targetLang);
         })
       : docsRaw;
+
+    // Filtrar por categoría: verificar que los subjects del libro contengan el topic
+    // Esto excluye libros que no pertenecen realmente a la categoría
+    if (topic) {
+      const topicWords = topic.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+      docs = docs.filter((b: any) => {
+        const subjects = (b.subject || []).map((s: string) => s.toLowerCase());
+        // El libro debe tener al menos una de las palabras clave del topic en sus subjects
+        return topicWords.some((word) =>
+          subjects.some((s: string) => s.includes(word))
+        );
+      });
+    }
     const results: Book[] = docs.map((b: any) => {
       const cover = b.cover_i
         ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg`
@@ -731,15 +745,19 @@ export async function GET(req: NextRequest) {
   const topic = catEntry
     ? (language === "es" && catEntry.gutenbergEs ? catEntry.gutenbergEs : catEntry.gutenberg)
     : undefined;
+  // Para Open Library, usar su propio campo de búsqueda (más preciso)
+  const topicOL = catEntry ? catEntry.openlibrary : undefined;
 
   const tasks: Promise<Book[]>[] = [];
   if (source === "all" || source === "gutenberg")
     tasks.push(searchGutenberg(query, page, language || undefined, topic));
   if (source === "all" || source === "openlibrary")
-    tasks.push(searchOpenLibrary(query, page, limit, language || undefined, topic));
+    tasks.push(searchOpenLibrary(query, page, limit, language || undefined, topicOL));
   if (source === "all" || source === "standardebooks")
     tasks.push(searchStandardEbooks(query, page, limit, topic));
-  if (source === "all" || source === "archive")
+  // Archive solo buscar cuando hay query explícito (no en carruseles por categoría)
+  // porque Archive no filtra bien por categoría y trae resultados aleatorios
+  if ((source === "all" || source === "archive") && query)
     tasks.push(searchArchive(query, page, limit, language || undefined));
   if (source === "all" || source === "wikisource")
     tasks.push(searchWikisource(query, page, limit, language || undefined));
