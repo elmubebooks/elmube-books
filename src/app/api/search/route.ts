@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export type BookSource = "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource";
+export type BookSource = "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad";
 
 export interface Book {
   id: string;
@@ -446,6 +446,53 @@ async function searchWikisource(query: string, page: number, limit: number, lang
   }
 }
 
+/* ================= Wattpad (autores contemporáneos gratuitos y legales) ================= */
+// Wattpad permite a autores publicar gratis. Su API v3 es pública y devuelve JSON.
+async function searchWattpad(query: string, page: number, limit: number, language?: string) {
+  try {
+    // Idioma: Wattpad usa códigos ISO 639-1 (es, en, fr, etc.)
+    const lang = language && language !== "all" ? language : "es";
+    const offset = (Math.max(1, page) - 1) * limit;
+    const url = `https://www.wattpad.com/api/v3/stories?query=${encodeURIComponent(query)}&language=${lang}&limit=${limit}&offset=${offset}`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "ELMUBEBOOKS/1.0 (contacto: elmubebooks@gmail.com)",
+      },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const stories = data.stories || [];
+    const results: Book[] = stories.map((s: any) => {
+      const storyId = s.id;
+      const cover = s.cover
+        ? s.cover.replace("-256-", "-512-") // portada más grande
+        : null;
+      const author = s.user?.name || s.user?.fullname || "Autor Wattpad";
+      const readUrl = `https://www.wattpad.com/story/${storyId}`;
+      return {
+        id: `wattpad-${storyId}`,
+        title: s.title || "Sin título",
+        author,
+        year: s.createDate ? parseInt(s.createDate.slice(0, 4), 10) : null,
+        language: lang,
+        subjects: ["Wattpad", "Autores contemporáneos"],
+        cover,
+        description: s.description ? s.description.slice(0, 400) : null,
+        source: "wattpad",
+        downloads: [
+          { label: "Leer online", url: readUrl },
+        ],
+        previewUrl: null,
+      };
+    });
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim();
@@ -473,6 +520,8 @@ export async function GET(req: NextRequest) {
     tasks.push(searchArchive(query, page, limit, language || undefined));
   if (source === "all" || source === "wikisource")
     tasks.push(searchWikisource(query, page, limit, language || undefined));
+  if (source === "all" || source === "wattpad")
+    tasks.push(searchWattpad(query, page, limit, language || undefined));
 
   const settled = await Promise.allSettled(tasks);
   let books: Book[] = [];

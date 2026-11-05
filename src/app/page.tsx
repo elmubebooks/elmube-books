@@ -34,6 +34,7 @@ import {
   ArrowLeft,
   Home as HomeIcon,
   Menu,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,7 @@ interface Book {
   subjects?: string[];
   cover?: string | null;
   description?: string | null;
-  source: "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource";
+  source: "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad";
   downloads: { label: string; url: string }[];
   previewUrl?: string | null;
 }
@@ -131,6 +132,7 @@ const SOURCE_LABEL: Record<Book["source"], string> = {
   standardebooks: "Standard Ebooks",
   archive: "Internet Archive",
   wikisource: "Wikisource",
+  wattpad: "Wattpad",
 };
 
 const SOURCE_BADGE: Record<Book["source"], string> = {
@@ -139,6 +141,7 @@ const SOURCE_BADGE: Record<Book["source"], string> = {
   standardebooks: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-900/30 dark:text-rose-200",
   archive: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200",
   wikisource: "bg-violet-100 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-200",
+  wattpad: "bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200",
 };
 
 const SOURCE_SHORT: Record<Book["source"], string> = {
@@ -147,6 +150,7 @@ const SOURCE_SHORT: Record<Book["source"], string> = {
   standardebooks: "SE",
   archive: "IA",
   wikisource: "WS",
+  wattpad: "WP",
 };
 
 const LANG_LABEL: Record<string, string> = {
@@ -213,6 +217,80 @@ const CATEGORIES = [
   { value: "arte", label: "Arte", icon: "🎨" },
 ];
 
+// Autores cuyas obras SÍ son dominio público, organizados por país
+// Incluye escritores de la época colonial, independencia y modernistas
+const LATIN_AUTHORS = [
+  // México 🇲🇽
+  { name: "Sor Juana Inés de la Cruz", country: "🇲🇽", years: "1648-1695", query: "Sor Juana Ines de la Cruz" },
+  { name: "Amado Nervo", country: "🇲🇽", years: "1870-1919", query: "Amado Nervo" },
+  { name: "Manuel Gutiérrez Nájera", country: "🇲🇽", years: "1859-1895", query: "Manuel Gutierrez Najera" },
+  { name: "Ignacio Manuel Altamirano", country: "🇲🇽", years: "1834-1893", query: "Ignacio Manuel Altamirano" },
+  { name: "Manuel Acuña", country: "🇲🇽", years: "1849-1873", query: "Manuel Acuna" },
+  { name: "Salvador Díaz Mirón", country: "🇲🇽", years: "1853-1928", query: "Salvador Diaz Miron" },
+  // Argentina 🇦🇷
+  { name: "José Hernández", country: "🇦🇷", years: "1834-1886", query: "Jose Hernandez Martin Fierro" },
+  { name: "Esteban Echeverría", country: "🇦🇷", years: "1805-1851", query: "Esteban Echeverria" },
+  { name: "Domingo Faustino Sarmiento", country: "🇦🇷", years: "1811-1888", query: "Sarmiento Facundo" },
+  // Uruguay 🇺🇾
+  { name: "Juan Zorrilla de San Martín", country: "🇺🇾", years: "1855-1931", query: "Juan Zorrilla San Martin" },
+  { name: "Horacio Quiroga", country: "🇺🇾", years: "1878-1937", query: "Horacio Quiroga" },
+  // Nicaragua 🇳🇮
+  { name: "Rubén Darío", country: "🇳🇮", years: "1867-1916", query: "Ruben Dario" },
+  // Colombia 🇨🇴
+  { name: "José Asunción Silva", country: "🇨🇴", years: "1865-1896", query: "Jose Asuncion Silva" },
+  { name: "Jorge Isaacs", country: "🇨🇴", years: "1837-1895", query: "Jorge Isaacs Maria" },
+  // Cuba 🇨🇺
+  { name: "José Martí", country: "🇨🇺", years: "1853-1895", query: "Jose Marti" },
+  { name: "Gertrudis Gómez de Avellaneda", country: "🇨🇺", years: "1814-1873", query: "Gertrudis Gomez Avellaneda" },
+  // Perú 🇵🇪
+  { name: "Ricardo Palma", country: "🇵🇪", years: "1833-1919", query: "Ricardo Palma Tradiciones" },
+  { name: "Manuel González Prada", country: "🇵🇪", years: "1844-1918", query: "Manuel Gonzalez Prada" },
+  // Venezuela 🇻🇪
+  { name: "Andrés Bello", country: "🇻🇪", years: "1781-1865", query: "Andres Bello" },
+  { name: "Rufino José Cuervo", country: "🇨🇴", years: "1844-1911", query: "Rufino Jose Cuervo" },
+  // Chile 🇨🇱
+  { name: "Gabriela Mistral", country: "🇨🇱", years: "1889-1957", query: "Gabriela Mistral" },
+  // Guatemala 🇬🇹
+  { name: "Miguel Ángel Asturias", country: "🇬🇹", years: "1899-1974", query: "Miguel Angel Asturias" },
+  // España 🇪🇸
+  { name: "Cervantes", country: "🇪🇸", years: "1547-1616", query: "Cervantes Saavedra" },
+  { name: "Lope de Vega", country: "🇪🇸", years: "1562-1635", query: "Lope de Vega" },
+  { name: "Tirso de Molina", country: "🇪🇸", years: "1579-1648", query: "Tirso de Molina" },
+  { name: "Calderón de la Barca", country: "🇪🇸", years: "1600-1681", query: "Calderon Barca" },
+  { name: "Quevedo", country: "🇪🇸", years: "1580-1645", query: "Francisco Quevedo" },
+  { name: "Góngora", country: "🇪🇸", years: "1561-1627", query: "Luis Gongora" },
+  { name: "Bécquer", country: "🇪🇸", years: "1836-1870", query: "Gustavo Adolfo Becquer" },
+  { name: "Fernán Caballero", country: "🇪🇸", years: "1796-1877", query: "Fernan Caballero" },
+  { name: "Pedro Antonio de Alarcón", country: "🇪🇸", years: "1833-1891", query: "Pedro Antonio Alarcon" },
+  { name: "Juan Valera", country: "🇪🇸", years: "1824-1905", query: "Juan Valera" },
+  { name: "José de Espronceda", country: "🇪🇸", years: "1808-1842", query: "Espronceda" },
+  { name: "Mariano José de Larra", country: "🇪🇸", years: "1809-1837", query: "Mariano Larra" },
+];
+
+// Agrupar por país para el dropdown
+const AUTHORS_BY_COUNTRY: Record<string, { name: string; years: string; query: string }[]> = (() => {
+  const grouped: Record<string, { name: string; years: string; query: string }[]> = {};
+  for (const a of LATIN_AUTHORS) {
+    if (!grouped[a.country]) grouped[a.country] = [];
+    grouped[a.country].push({ name: a.name, years: a.years, query: a.query });
+  }
+  return grouped;
+})();
+
+const COUNTRY_NAMES: Record<string, string> = {
+  "🇲🇽": "México",
+  "🇦🇷": "Argentina",
+  "🇺🇾": "Uruguay",
+  "🇳🇮": "Nicaragua",
+  "🇨🇴": "Colombia",
+  "🇨🇺": "Cuba",
+  "🇵🇪": "Perú",
+  "🇻🇪": "Venezuela",
+  "🇨🇱": "Chile",
+  "🇬🇹": "Guatemala",
+  "🇪🇸": "España",
+};
+
 type View = "home" | "results" | "favorites" | "history" | "categories";
 
 export default function Home() {
@@ -247,6 +325,7 @@ export default function Home() {
   const [homeCarousels, setHomeCarousels] = useState<Record<string, Book[]>>({});
   const [homeCarouselsLoading, setHomeCarouselsLoading] = useState(true);
   const [booksDropdownOpen, setBooksDropdownOpen] = useState(false);
+  const [authorsDropdownOpen, setAuthorsDropdownOpen] = useState(false);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -552,6 +631,14 @@ export default function Home() {
     search("", source, language, cat);
   };
 
+  const onAuthorClick = (author: string) => {
+    setQuery(author);
+    setActiveQuery(author);
+    setCategory("");
+    setView("results");
+    search(author, source, language, "");
+  };
+
   /* ----- Vista previa ----- */
   const openPreview = async (book: Book) => {
     setPreviewBook(book);
@@ -670,6 +757,60 @@ export default function Home() {
             )}
           </div>
 
+          {/* Botón "Autores" con dropdown (desktop) */}
+          <div className="relative hidden md:block flex-shrink-0">
+            <button
+              onClick={() => {
+                setAuthorsDropdownOpen((v) => !v);
+                setBooksDropdownOpen(false);
+              }}
+              className="flex items-center gap-1.5 px-3 h-10 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-sm font-medium"
+              aria-label="Ver autores destacados"
+              aria-expanded={authorsDropdownOpen}
+            >
+              <User className="w-4 h-4" />
+              <span>Autores</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${authorsDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {authorsDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setAuthorsDropdownOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 w-96 max-h-[70vh] overflow-y-auto scroll-elegant bg-popover border border-border rounded-md shadow-xl z-50 p-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+                    Autores en español (dominio público)
+                  </p>
+                  {Object.entries(AUTHORS_BY_COUNTRY).map(([country, authors]) => (
+                    <div key={country} className="mb-2">
+                      <p className="text-xs font-bold text-foreground/80 px-2 py-1 flex items-center gap-1.5">
+                        <span className="text-sm">{country}</span>
+                        <span>{COUNTRY_NAMES[country] || country}</span>
+                        <span className="text-muted-foreground font-normal">({authors.length})</span>
+                      </p>
+                      <div className="space-y-0.5">
+                        {authors.map((author) => (
+                          <button
+                            key={author.name + country}
+                            onClick={() => {
+                              onAuthorClick(author.query);
+                              setAuthorsDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-sm hover:bg-secondary transition-colors text-left"
+                          >
+                            <span className="truncate font-medium">{author.name}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">{author.years}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit} className="flex-1 flex gap-2 max-w-2xl mx-auto">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -755,15 +896,16 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fila 2 (móvil/tablet): Categorías scrollables + idioma + menú hamburguesa - sticky */}
-        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-3 py-2 flex items-center gap-1.5 overflow-x-auto scroll-elegant">
-          {/* Botón hamburguesa */}
+        {/* Fila 2 (móvil/tablet): Menú → Libros → Idioma - sticky, SIN overflow */}
+        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-3 py-2 flex items-center gap-1.5">
+          {/* Botón Menú */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="flex items-center justify-center w-8 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors flex-shrink-0"
+            className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium flex-shrink-0"
             aria-label="Abrir menú"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-3.5 h-3.5" />
+            <span>Menú</span>
           </button>
           {/* Botón Libros (dropdown categorías en móvil) */}
           <div className="relative flex-shrink-0">
@@ -806,9 +948,62 @@ export default function Home() {
               </>
             )}
           </div>
-          {/* Selector idioma */}
+          {/* Botón Autores (dropdown en móvil) */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => {
+                setAuthorsDropdownOpen((v) => !v);
+                setBooksDropdownOpen(false);
+              }}
+              className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
+              aria-label="Ver autores destacados"
+              aria-expanded={authorsDropdownOpen}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Autores</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${authorsDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {authorsDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setAuthorsDropdownOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 w-80 max-h-[70vh] overflow-y-auto scroll-elegant bg-popover border border-border rounded-md shadow-xl z-50 p-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+                    Autores en español (dominio público)
+                  </p>
+                  {Object.entries(AUTHORS_BY_COUNTRY).map(([country, authors]) => (
+                    <div key={country} className="mb-2">
+                      <p className="text-[11px] font-bold text-foreground/80 px-2 py-1 flex items-center gap-1.5">
+                        <span className="text-sm">{country}</span>
+                        <span>{COUNTRY_NAMES[country] || country}</span>
+                        <span className="text-muted-foreground font-normal">({authors.length})</span>
+                      </p>
+                      <div className="space-y-0.5">
+                        {authors.map((author) => (
+                          <button
+                            key={author.name + country}
+                            onClick={() => {
+                              onAuthorClick(author.query);
+                              setAuthorsDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-xs hover:bg-secondary transition-colors text-left"
+                          >
+                            <span className="truncate font-medium">{author.name}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">{author.years}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {/* Selector Idioma */}
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-[115px] text-xs flex-shrink-0">
+            <SelectTrigger className="h-8 w-[120px] text-xs flex-shrink-0">
               <Globe className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
@@ -820,19 +1015,6 @@ export default function Home() {
               ))}
             </SelectContent>
           </Select>
-          {/* Categorías scrollables siempre visibles */}
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => onCategoryClick(c.value)}
-              className={`flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
-                category === c.value ? "bg-primary text-primary-foreground" : "hover:bg-secondary bg-card border border-border"
-              }`}
-            >
-              <span>{c.icon}</span>
-              <span>{c.label}</span>
-            </button>
-          ))}
         </div>
 
         {/* Indicador de idioma activo (solo en resultados, si hay filtro) */}
@@ -869,8 +1051,36 @@ export default function Home() {
               <span className="text-primary">libros de dominio público</span>
             </h2>
             <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
-              Una sola búsqueda en 5 fuentes. Descarga en EPUB, PDF, TXT, HTML o Kindle — gratis y legal.
+              Una sola búsqueda en 6 fuentes. Descarga en EPUB, PDF, TXT, HTML o Kindle — gratis y legal.
             </p>
+          </div>
+
+          {/* Sección: Autores latinoamericanos y españoles destacados (dominio público) */}
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <h3 className="font-serif text-lg sm:text-xl font-semibold flex items-center gap-2">
+                <span className="text-xl">✨</span>
+                <span>Autores en español</span>
+              </h3>
+              <span className="text-xs text-muted-foreground">(dominio público)</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4 sm:mx-0 sm:px-1">
+              {LATIN_AUTHORS.map((author) => (
+                <button
+                  key={author.name}
+                  onClick={() => onAuthorClick(author.query)}
+                  className="flex-shrink-0 min-w-[140px] max-w-[180px] p-3 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">{author.country}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{author.years}</span>
+                  </div>
+                  <p className="font-serif text-sm font-semibold leading-tight line-clamp-2">
+                    {author.name}
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Carruseles por categoría */}
