@@ -2081,7 +2081,11 @@ function BookCard({
             onOpen();
           }
         }}
-        className="relative aspect-[2/3] w-full rounded-md overflow-hidden border border-border bg-secondary hover:border-primary/50 transition-all shadow-sm hover:shadow-md text-left cursor-pointer"
+        className={`relative aspect-[2/3] w-full rounded-md overflow-hidden border hover:border-primary/50 transition-all shadow-sm hover:shadow-md text-left cursor-pointer ${
+          book.isAudiobook && !book.cover
+            ? "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 border-fuchsia-300/50"
+            : "bg-secondary border-border"
+        }`}
       >
         {book.cover ? (
           <img
@@ -2098,7 +2102,7 @@ function BookCard({
                 fb.className =
                   "fallback-cover w-full h-full flex flex-col items-center justify-center p-2 text-center";
                 if (book.isAudiobook) {
-                  fb.innerHTML = `<div class="w-10 h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-fuchsia-600"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M21 14h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1z"/><path d="M3 14a9 9 0 0 1 18 0"/></svg></div><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
+                  fb.innerHTML = `<div class="w-14 h-14 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center mb-2 shadow-lg ring-2 ring-white/40"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1z"/><path d="M21 14h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1z"/><path d="M3 14a9 9 0 0 1 18 0"/></svg></div><div class="text-[9px] font-bold text-white/90 uppercase tracking-wider mb-1">Audiolibro</div><span class="text-[10px] text-white line-clamp-3 font-serif px-1">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
                 } else {
                   fb.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground mb-1"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span class="text-[10px] text-muted-foreground line-clamp-3 font-serif">${book.title.replace(/</g, "&lt;").slice(0, 60)}</span>`;
                 }
@@ -2106,15 +2110,33 @@ function BookCard({
               }
             }}
           />
+        ) : book.isAudiobook ? (
+          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 relative overflow-hidden">
+            {/* Decoración de ondas de sonido en el fondo */}
+            <div className="absolute inset-0 opacity-20">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                <path d="M0,50 Q25,30 50,50 T100,50" stroke="white" strokeWidth="1" fill="none"/>
+                <path d="M0,50 Q25,70 50,50 T100,50" stroke="white" strokeWidth="1" fill="none"/>
+                <path d="M0,40 Q25,20 50,40 T100,40" stroke="white" strokeWidth="0.5" fill="none"/>
+                <path d="M0,60 Q25,80 50,60 T100,60" stroke="white" strokeWidth="0.5" fill="none"/>
+              </svg>
+            </div>
+            {/* Contenido */}
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center mb-2 shadow-lg ring-2 ring-white/40">
+                <Headphones className="w-7 h-7 text-white" />
+              </div>
+              <div className="text-[9px] font-bold text-white/90 uppercase tracking-wider mb-1">
+                Audiolibro
+              </div>
+              <span className="text-[10px] text-white line-clamp-3 font-serif px-1">
+                {book.title}
+              </span>
+            </div>
+          </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
-            {book.isAudiobook ? (
-              <div className="w-10 h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-2">
-                <Headphones className="w-5 h-5 text-fuchsia-600" />
-              </div>
-            ) : (
-              <BookOpen className="w-6 h-6 text-muted-foreground mb-1" />
-            )}
+            <BookOpen className="w-6 h-6 text-muted-foreground mb-1" />
             <span className="text-[10px] text-muted-foreground line-clamp-3 font-serif">
               {book.title}
             </span>

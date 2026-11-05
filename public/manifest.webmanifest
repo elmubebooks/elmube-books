@@ -1,6 +1,6 @@
 {
   "name": "ELMUBE BOOKS",
-  "short_name": "ELMUBE",
+  "short_name": "ELMUBE BOOKS",
   "description": "Buscador y descargador de libros libres de dominio público. Project Gutenberg, Open Library, Standard Ebooks.",
   "start_url": "/",
   "display": "standalone",
