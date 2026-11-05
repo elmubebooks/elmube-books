@@ -35,6 +35,9 @@ import {
   Home as HomeIcon,
   Menu,
   User,
+  Headphones,
+  Play,
+  Pause,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,9 +81,12 @@ interface Book {
   subjects?: string[];
   cover?: string | null;
   description?: string | null;
-  source: "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad";
+  source: "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad" | "librivox";
   downloads: { label: string; url: string }[];
   previewUrl?: string | null;
+  audioUrl?: string | null;
+  audioDuration?: string | null;
+  isAudiobook?: boolean;
 }
 
 interface DownloadEntry {
@@ -133,6 +139,7 @@ const SOURCE_LABEL: Record<Book["source"], string> = {
   archive: "Internet Archive",
   wikisource: "Wikisource",
   wattpad: "Wattpad",
+  librivox: "Audiolibro (LibriVox)",
 };
 
 const SOURCE_BADGE: Record<Book["source"], string> = {
@@ -142,6 +149,7 @@ const SOURCE_BADGE: Record<Book["source"], string> = {
   archive: "bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200",
   wikisource: "bg-violet-100 text-violet-900 border-violet-300 dark:bg-violet-900/30 dark:text-violet-200",
   wattpad: "bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200",
+  librivox: "bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300 dark:bg-fuchsia-900/30 dark:text-fuchsia-200",
 };
 
 const SOURCE_SHORT: Record<Book["source"], string> = {
@@ -151,6 +159,7 @@ const SOURCE_SHORT: Record<Book["source"], string> = {
   archive: "IA",
   wikisource: "WS",
   wattpad: "WP",
+  librivox: "🎧",
 };
 
 const LANG_LABEL: Record<string, string> = {
@@ -380,6 +389,8 @@ export default function Home() {
   const [homeCarouselsLoading, setHomeCarouselsLoading] = useState(true);
   const [booksDropdownOpen, setBooksDropdownOpen] = useState(false);
   const [authorsDropdownOpen, setAuthorsDropdownOpen] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -1560,6 +1571,39 @@ export default function Home() {
                   </p>
                 )}
 
+                {/* Reproductor de audio para audiolibros */}
+                {selected.isAudiobook && selected.audioUrl && (
+                  <div className="p-4 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-900/20 border border-fuchsia-200 dark:border-fuchsia-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Headphones className="w-5 h-5 text-fuchsia-600 dark:text-fuchsia-400" />
+                      <div>
+                        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-100">
+                          Audiolibro disponible
+                        </p>
+                        {selected.audioDuration && (
+                          <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300">
+                            Duración: {selected.audioDuration}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <audio
+                      ref={setAudioRef}
+                      src={selected.audioUrl}
+                      controls
+                      className="w-full"
+                      onPlay={() => setAudioPlaying(true)}
+                      onPause={() => setAudioPlaying(false)}
+                      onEnded={() => setAudioPlaying(false)}
+                    >
+                      Tu navegador no soporta audio.
+                    </audio>
+                    <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300 mt-2">
+                      💡 Pulsa play para escuchar ahora, o usa los botones de descarga abajo.
+                    </p>
+                  </div>
+                )}
+
                 {/* Botón de vista previa */}
                 {selected.previewUrl && (
                   <Button
@@ -2092,8 +2136,15 @@ function BookCard({
           />
         </button>
 
-        {/* Indicador de descarga */}
-        {book.downloads.length > 0 && (
+        {/* Indicador de audiolibro */}
+        {book.isAudiobook && (
+          <div className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-fuchsia-500 text-white flex items-center justify-center">
+            <Headphones className="w-3 h-3" />
+          </div>
+        )}
+
+        {/* Indicador de descarga (solo si no es audiolibro) */}
+        {!book.isAudiobook && book.downloads.length > 0 && (
           <div className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
             <Download className="w-3 h-3" />
           </div>

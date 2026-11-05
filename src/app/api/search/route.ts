@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import https from "https";
 
-export type BookSource = "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad";
+// Workaround para error "fetch failed" con LibriVox (problema TLS/IPv6 de undici)
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false,
+  family: 4, // Forzar IPv4
+});
+
+export type BookSource = "gutenberg" | "openlibrary" | "standardebooks" | "archive" | "wikisource" | "wattpad" | "librivox";
 
 export interface Book {
   id: string;
@@ -14,6 +21,9 @@ export interface Book {
   source: BookSource;
   downloads: { label: string; url: string }[];
   previewUrl?: string | null;
+  audioUrl?: string | null;
+  audioDuration?: string | null;
+  isAudiobook?: boolean;
 }
 
 /* Mapeo categorías UI → keywords por fuente */
@@ -302,41 +312,60 @@ async function searchStandardEbooks(
   }
 }
 
-/* ================= Internet Archive (colección Gutenberg + opensource) ================= */
+/* ================= Internet Archive (libros + audiolibros) ================= */
 async function searchArchive(query: string, page: number, limit: number, language?: string) {
   try {
-    // Usamos la advancedsearch de Internet Archive
-    // Buscamos en mediatype:texts y collection:gutenberg (libros de dominio público)
     const start = (Math.max(1, page) - 1) * limit;
-    let q = `mediatype:texts AND collection:(gutenberg OR opensource OR americana) AND (${query})`;
-    if (language && LANG_MAP[language]) {
-      // Internet Archive usa códigos de 3 letras
-      const langMap: Record<string, string> = {
-        es: "spa OR spanish OR español",
-        en: "eng OR english",
-        fr: "fre OR french OR français",
-        de: "ger OR german OR deutsch",
-        it: "ita OR italian",
-        pt: "por OR portuguese",
-      };
-      if (langMap[language]) q += ` AND language:(${langMap[language]})`;
-    }
 
-    const params = new URLSearchParams({
-      q,
-      "fl[]": "identifier,title,creator,year,language,description,collection",
-      rows: String(limit),
-      start: String(start),
-      output: "json",
-    });
-    const url = `https://archive.org/advancedsearch.php?${params.toString()}`;
-    const res = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "ELMUBEBOOKS/1.0" },
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const docs = data?.response?.docs || [];
+    // Hacemos DOS búsquedas: una para libros (texts) y otra para audiolibros (audio)
+    // y las combinamos. La API de Archive no soporta OR entre mediatypes correctamente.
+    const buildQuery = (mediatype: string) => {
+      let q = `mediatype:${mediatype}`;
+      if (query) {
+        q += ` AND (title:(${query}) OR creator:(${query}) OR description:(${query}))`;
+      } else {
+        q += ` AND collection:(gutenberg OR opensource OR americana)`;
+      }
+      if (language && LANG_MAP[language]) {
+        const langMap: Record<string, string> = {
+          es: "spa OR spanish OR español",
+          en: "eng OR english",
+          fr: "fre OR french OR français",
+          de: "ger OR german OR deutsch",
+          it: "ita OR italian",
+          pt: "por OR portuguese",
+        };
+        if (langMap[language]) q += ` AND language:(${langMap[language]})`;
+      }
+      return q;
+    };
+
+    // Función para obtener docs de Archive
+    const fetchDocs = async (mediatype: string): Promise<any[]> => {
+      const params = new URLSearchParams({
+        q: buildQuery(mediatype),
+        "fl[]": "identifier,title,creator,year,language,description,collection",
+        rows: String(mediatype === "audio" ? limit : limit),
+        start: String(start),
+        output: "json",
+      });
+      const url = `https://archive.org/advancedsearch.php?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { Accept: "application/json", "User-Agent": "ELMUBEBOOKS/1.0" },
+        next: { revalidate: 60 },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data?.response?.docs || [];
+    };
+
+    // Lanzar ambas búsquedas en paralelo
+    const [textDocs, audioDocs] = await Promise.all([
+      fetchDocs("texts"),
+      fetchDocs("audio"),
+    ]);
+    // Combinar: primero audiolibros, luego textos
+    const docs = [...audioDocs, ...textDocs].slice(0, limit * 2);
     if (docs.length === 0) return [];
 
     // Para cada libro, obtener metadata completa (para archivos descargables)
@@ -357,6 +386,9 @@ async function searchArchive(query: string, page: number, limit: number, languag
 
           // Construir URLs de descarga
           const downloads: { label: string; url: string }[] = [];
+          let audioUrl: string | null = null;
+          let totalDuration: string | null = null;
+          let mp3Count = 0;
           for (const f of meta.files || []) {
             const name = f.name || "";
             const fmt = (f.format || "").toLowerCase();
@@ -371,14 +403,39 @@ async function searchArchive(query: string, page: number, limit: number, languag
               downloads.push({ label: "TXT", url });
             else if (fmt.includes("html") || name.endsWith(".htm") || name.endsWith(".html"))
               downloads.push({ label: "HTML", url });
+            // Detectar audiolibros (MP3)
+            else if (fmt.includes("mp3") || name.endsWith(".mp3")) {
+              mp3Count++;
+              if (!audioUrl) audioUrl = url;
+            }
           }
-          // Siempre ofrecer "Leer en línea" (BookReader)
-          downloads.push({ label: "Leer online", url: `https://archive.org/details/${id}` });
 
-          // Preview: TXT si existe
-          const txtFile = (meta.files || []).find((f: any) =>
+          // Determinar si es audiolibro: si el mediatype es audio o tiene MP3s
+          const collections = Array.isArray(m.collection) ? m.collection : (m.collection ? [m.collection] : []);
+          const mediatype = (m.mediatype || "").toLowerCase();
+          const isLibrivox = collections.some((c: string) => String(c).toLowerCase().includes("librivox"));
+          const isAudiobook = isLibrivox || mediatype === "audio" || mp3Count > 0;
+
+          if (isAudiobook) {
+            // Para audiolibros, ofrecer escuchar y descargar MP3
+            downloads.unshift({ label: "▶ Escuchar online", url: `https://archive.org/details/${id}` });
+            // URL de streaming (primer MP3 o playlist)
+            if (mp3Count > 0) {
+              downloads.push({ label: "MP3 (primero)", url: audioUrl! });
+            }
+            // Descargar todo como ZIP
+            downloads.push({ label: "Audio ZIP", url: `https://archive.org/compress/${id}/formats=64KBPS MP3` });
+            // Duración total si existe
+            totalDuration = m.runtime || (mp3Count > 0 ? `${mp3Count} pistas` : null);
+          } else {
+            // Para libros, ofrecer "Leer en línea" (BookReader)
+            downloads.push({ label: "Leer online", url: `https://archive.org/details/${id}` });
+          }
+
+          // Preview: TXT si existe (solo para libros, no audiolibros)
+          const txtFile = !isAudiobook ? (meta.files || []).find((f: any) =>
             (f.format || "").toLowerCase().includes("text") && (f.name || "").includes("_djvu.txt")
-          );
+          ) : null;
           const previewUrl = txtFile
             ? `https://${server}${dir}/${txtFile.name}`
             : null;
@@ -392,9 +449,12 @@ async function searchArchive(query: string, page: number, limit: number, languag
             subjects: Array.isArray(m.collection) ? m.collection.slice(0, 4) : [],
             cover: `https://archive.org/services/img/${id}`,
             description: Array.isArray(m.description) ? m.description[0]?.slice(0, 400) : (m.description || null),
-            source: "archive",
+            source: isAudiobook ? "librivox" : "archive",
             downloads,
             previewUrl,
+            audioUrl: isAudiobook ? audioUrl : undefined,
+            audioDuration: totalDuration,
+            isAudiobook: isAudiobook,
           });
         } catch {}
       })
@@ -508,6 +568,146 @@ async function searchWattpad(query: string, page: number, limit: number, languag
   }
 }
 
+/* ================= LibriVox (audiolibros gratis en dominio público) ================= */
+// LibriVox tiene +30,000 audiolibros narrados por voluntarios. API pública sin auth.
+// Usamos https.get en vez de fetch porque undici (fetch de Next.js) tiene problemas TLS con LibriVox.
+async function searchLibrivox(query: string, page: number, limit: number, language?: string): Promise<Book[]> {
+  return new Promise((resolve) => {
+    const offset = (Math.max(1, page) - 1) * limit;
+    const fetchLimit = language && language !== "all" ? 50 : limit * 2;
+    const params = new URLSearchParams({
+      format: "json",
+      limit: String(fetchLimit),
+      offset: String(offset),
+    });
+    if (query) {
+      params.set("title", query);
+    }
+    const url = `https://librivox.org/api/feed/audiobooks?${params.toString()}`;
+    const parsedUrl = new URL(url);
+
+    const req = https.get(
+      url,
+      {
+        agent: httpsAgent,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "ELMUBEBOOKS/1.0 (contacto: elmubebooks@gmail.com)",
+        },
+        family: 4,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data);
+            processLibrivoxResults(parsed, query, limit, language, resolve);
+          } catch (e) {
+            console.error("LibriVox parse error:", e);
+            resolve([]);
+          }
+        });
+      }
+    );
+    req.on("error", (e) => {
+      console.error("LibriVox request error:", e.message);
+      resolve([]);
+    });
+    req.setTimeout(15000, () => {
+      req.destroy();
+      resolve([]);
+    });
+  });
+}
+
+function processLibrivoxResults(
+  data: any,
+  query: string,
+  limit: number,
+  language: string | undefined,
+  resolve: (books: Book[]) => void
+) {
+  let books: any[] = data.books || [];
+
+  // Filtrar por título si hay query
+  if (query && books.length > 0) {
+    const qLower = query.toLowerCase();
+    const filtered = books.filter((b: any) => {
+      const title = (b.title || "").toLowerCase();
+      return title.includes(qLower);
+    });
+    if (filtered.length > 0) {
+      books = filtered;
+    }
+  }
+
+  // Filtrar por idioma
+  if (language && language !== "all") {
+    const langMap: Record<string, string[]> = {
+      es: ["spanish", "español", "espanol"],
+      en: ["english", "inglés"],
+      fr: ["french", "français"],
+      de: ["german", "deutsch"],
+      it: ["italian", "italiano"],
+      pt: ["portuguese", "português"],
+    };
+    const targetLangs = langMap[language] || [language];
+    books = books.filter((b: any) => {
+      const bookLang = (b.language || "").toLowerCase();
+      return targetLangs.some((l) => bookLang.includes(l));
+    });
+  }
+
+  const results: Book[] = books.slice(0, limit).map((b: any) => {
+    const authors = b.authors || [];
+    const authorName =
+      authors.length > 0
+        ? `${authors[0].first_name || ""} ${authors[0].last_name || ""}`.trim() || "Autor desconocido"
+        : "Autor desconocido";
+    const cover = b.url_image && !b.url_image.includes("noimage") ? b.url_image : null;
+    const librivoxUrl = b.url_librivox || "";
+    const rssUrl = b.url_rss || "";
+    const zipUrl = b.url_zip_file || "";
+    const desc = b.description ? b.description.replace(/<[^>]+>/g, "").slice(0, 400) : null;
+    const langRaw = (b.language || "").toLowerCase();
+    let langCode = langRaw;
+    if (langRaw.includes("spanish") || langRaw.includes("español")) langCode = "es";
+    else if (langRaw.includes("english")) langCode = "en";
+    else if (langRaw.includes("french") || langRaw.includes("français")) langCode = "fr";
+    else if (langRaw.includes("german") || langRaw.includes("deutsch")) langCode = "de";
+    else if (langRaw.includes("italian")) langCode = "it";
+    else if (langRaw.includes("portuguese")) langCode = "pt";
+
+    const downloads: { label: string; url: string }[] = [
+      { label: "▶ Escuchar", url: librivoxUrl },
+    ];
+    if (zipUrl) {
+      downloads.push({ label: "MP3 (zip)", url: zipUrl });
+    }
+
+    return {
+      id: `librivox-${b.id}`,
+      title: b.title || "Sin título",
+      author: authorName,
+      year: b.copyright_year ? parseInt(String(b.copyright_year), 10) || null : null,
+      language: langCode,
+      subjects: ["Audiolibro", "LibriVox"],
+      cover,
+      description: desc,
+      source: "librivox",
+      downloads,
+      previewUrl: null,
+      audioUrl: rssUrl || librivoxUrl,
+      audioDuration: b.totaltime || null,
+      isAudiobook: true,
+    };
+  });
+  resolve(results);
+}
+
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim();
@@ -541,6 +741,8 @@ export async function GET(req: NextRequest) {
     tasks.push(searchWikisource(query, page, limit, language || undefined));
   if (source === "all" || source === "wattpad")
     tasks.push(searchWattpad(query, page, limit, language || undefined));
+  if (source === "all" || source === "librivox")
+    tasks.push(searchLibrivox(query, page, limit, language || undefined));
 
   const settled = await Promise.allSettled(tasks);
   let books: Book[] = [];
