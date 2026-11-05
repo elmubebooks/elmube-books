@@ -422,6 +422,8 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [epubReaderBook, setEpubReaderBook] = useState<Book | null>(null);
+  const [linkChecks, setLinkChecks] = useState<Record<string, "ok" | "error" | "timeout" | "checking">>({});
+  const [linkCheckDone, setLinkCheckDone] = useState(false);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -457,6 +459,54 @@ export default function Home() {
     }
     setInstallPromptEvent(null);
   };
+
+  /* ----- Verificar enlaces de descarga al abrir un libro ----- */
+  useEffect(() => {
+    if (!selected || selected.downloads.length === 0) {
+      setLinkChecks({});
+      setLinkCheckDone(false);
+      return;
+    }
+
+    // Filtrar solo enlaces HTTP (no mailto, no javascript)
+    const linksToCheck = selected.downloads
+      .filter((d) => d.url.startsWith("http"))
+      .map((d) => ({ url: d.url, label: d.label }));
+
+    if (linksToCheck.length === 0) {
+      setLinkCheckDone(true);
+      return;
+    }
+
+    // Marcar todos como "checking"
+    const initialChecks: Record<string, "checking"> = {};
+    linksToCheck.forEach((l) => (initialChecks[l.url] = "checking"));
+    setLinkChecks(initialChecks);
+    setLinkCheckDone(false);
+
+    // Llamar a la API para verificar
+    fetch("/api/check-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ links: linksToCheck }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const newChecks: Record<string, "ok" | "error" | "timeout"> = {};
+        for (const r of data.results || []) {
+          newChecks[r.url] = r.status;
+        }
+        setLinkChecks(newChecks);
+        setLinkCheckDone(true);
+      })
+      .catch(() => {
+        // Si falla la verificación, asumir que todos están OK (no bloquear al usuario)
+        const fallback: Record<string, "ok"> = {};
+        linksToCheck.forEach((l) => (fallback[l.url] = "ok"));
+        setLinkChecks(fallback);
+        setLinkCheckDone(true);
+      });
+  }, [selected]);
 
   /* ----- Búsqueda por voz ----- */
   const toggleVoiceSearch = () => {
@@ -1749,20 +1799,29 @@ export default function Home() {
                   </Button>
                 )}
 
-                {/* Botón Leer EPUB (si hay descarga EPUB) */}
-                {selected.downloads.some((d) => d.label === "EPUB") && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => {
-                      setEpubReaderBook(selected);
-                      setSelected(null);
-                    }}
-                  >
-                    <BookText className="w-4 h-4 mr-1.5" /> Leer EPUB en la app
-                  </Button>
-                )}
+                {/* Botón Leer EPUB (solo si hay EPUB y el enlace funciona) */}
+                {(() => {
+                  const epubLink = selected.downloads.find((d) => d.label === "EPUB");
+                  const epubOk = epubLink && linkChecks[epubLink.url] === "ok";
+                  const epubChecking = epubLink && linkChecks[epubLink.url] === "checking";
+                  // Si ya se verificó y NO funciona, no mostrar el botón
+                  if (epubLink && linkCheckDone && !epubOk) return null;
+                  // Si está verificando o funciona, mostrar el botón
+                  if (!epubLink) return null;
+                  return (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => {
+                        setEpubReaderBook(selected);
+                        setSelected(null);
+                      }}
+                    >
+                      <BookText className="w-4 h-4 mr-1.5" /> Leer EPUB en la app
+                    </Button>
+                  );
+                })()}
 
                 <div>
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
@@ -1791,12 +1850,16 @@ export default function Home() {
                           const isExternal = d.url.startsWith("http");
                           const isEpub = d.label === "EPUB";
                           const isPdf = d.label === "PDF";
+                          const linkStatus = linkChecks[d.url]; // "ok" | "error" | "timeout" | "checking" | undefined
+                          const isBroken = linkStatus === "error" || linkStatus === "timeout";
+                          const isChecking = linkStatus === "checking";
                           return (
                             <Button
                               key={i}
                               asChild
                               size="sm"
                               variant={isEpub ? "default" : isPdf ? "outline" : i === 0 ? "default" : "outline"}
+                              className={isBroken ? "opacity-50 line-through" : ""}
                             >
                               <a
                                 href={d.url}
@@ -1811,12 +1874,28 @@ export default function Home() {
                                     ✓
                                   </Badge>
                                 )}
-                                {isExternal && <ExternalLink className="w-3 h-3 ml-1 opacity-60" />}
+                                {/* Estado del enlace */}
+                                {isChecking && <Loader2 className="w-3 h-3 ml-1 animate-spin opacity-60" />}
+                                {linkStatus === "ok" && <span className="ml-1 text-green-600">✅</span>}
+                                {isBroken && <span className="ml-1 text-red-500">❌</span>}
+                                {isExternal && !isChecking && !isBroken && linkStatus !== "ok" && (
+                                  <ExternalLink className="w-3 h-3 ml-1 opacity-60" />
+                                )}
                               </a>
                             </Button>
                           );
                         })}
                       </div>
+                      {/* Mensaje si hay enlaces rotos */}
+                      {linkCheckDone && Object.values(linkChecks).some((s) => s === "error" || s === "timeout") && (
+                        <div className="mt-2 p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
+                          <span className="text-red-500">⚠️</span>
+                          <span>
+                            Algunos enlaces no están disponibles (marcados con ❌).
+                            Prueba con otro formato o fuente.
+                          </span>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
