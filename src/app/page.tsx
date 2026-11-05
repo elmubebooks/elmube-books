@@ -758,11 +758,12 @@ export default function Home() {
             <div className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
             </div>
-            <div className="hidden lg:block text-left">
-              <h1 className="font-serif text-lg font-semibold leading-none">
+            {/* Móvil: solo nombre compacto / Desktop: nombre + subtítulo */}
+            <div className="text-left">
+              <h1 className="font-serif text-sm sm:text-lg font-semibold leading-none">
                 ELMUBE BOOKS
               </h1>
-              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+              <p className="hidden lg:block text-[11px] text-muted-foreground leading-tight mt-0.5">
                 Libros libres de dominio público
               </p>
             </div>
@@ -950,8 +951,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fila 2 (móvil/tablet): Menú → Libros → Autores → Idioma - sticky */}
-        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-2.5 py-2 flex items-center gap-1.5 overflow-x-auto scroll-elegant">
+        {/* Fila 2 (móvil/tablet): Menú → Libros → Autores → Idioma - sticky, SIN overflow */}
+        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-2 py-2 flex items-center gap-1">
           {/* Botón Menú (solo icono) */}
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -1054,10 +1055,10 @@ export default function Home() {
               </>
             )}
           </div>
-          {/* Selector Idioma */}
+          {/* Selector Idioma - con icono Globe + texto completo */}
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-[110px] text-xs flex-shrink-0">
-              <Globe className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+            <SelectTrigger className="h-8 w-[130px] text-xs flex-shrink-0 px-2">
+              <Globe className="w-3 h-3 mr-1.5 flex-shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
