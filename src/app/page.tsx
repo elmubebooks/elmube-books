@@ -31,6 +31,9 @@ import {
   Send,
   MessageSquare,
   ChevronDown,
+  ArrowLeft,
+  Home as HomeIcon,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,7 +171,7 @@ const LANG_LABEL: Record<string, string> = {
 };
 
 const LANGUAGES = [
-  { value: "all", label: "Todos" },
+  { value: "all", label: "Idioma" },
   { value: "es", label: "Español" },
   { value: "en", label: "Inglés" },
   { value: "fr", label: "Francés" },
@@ -190,21 +193,6 @@ const CATEGORIES = [
   { value: "infantiles", label: "Infantil", icon: "🧸" },
   { value: "religion", label: "Religión", icon: "🕊️" },
   { value: "biografia", label: "Biografía", icon: "👤" },
-];
-
-const SUGGESTIONS = [
-  "Cervantes",
-  "Shakespeare",
-  "Austen",
-  "Dickens",
-  "Dostoievski",
-  "Verne",
-  "Poe",
-  "Wilde",
-  "Tolstoy",
-  "Hugo",
-  "Nietzsche",
-  "Mark Twain",
 ];
 
 type View = "home" | "results" | "favorites" | "history" | "categories";
@@ -237,6 +225,7 @@ export default function Home() {
   const [commentText, setCommentText] = useState("");
   const [commentSending, setCommentSending] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -461,14 +450,6 @@ export default function Home() {
     search(query, source, language, "");
   };
 
-  const onSuggestion = (s: string) => {
-    setQuery(s);
-    setActiveQuery(s);
-    setCategory("");
-    setView("results");
-    search(s, source, language, "");
-  };
-
   const onSourceChange = (val: string) => {
     const s = val as typeof source;
     setSource(s);
@@ -648,11 +629,20 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fila 2 (móvil/tablet): Iconos en fila horizontal + selector idioma */}
-        <div className="md:hidden max-w-7xl mx-auto px-3 pb-2 flex items-center gap-1 overflow-x-auto scroll-elegant">
+        {/* Fila 2 (móvil/tablet): Categorías scrollables + idioma + menú hamburguesa - sticky */}
+        <div className="md:hidden sticky top-[56px] z-30 bg-background/95 backdrop-blur-md border-b border-border max-w-7xl mx-auto px-3 py-2 flex items-center gap-1.5 overflow-x-auto scroll-elegant">
+          {/* Botón hamburguesa */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex items-center justify-center w-8 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors flex-shrink-0"
+            aria-label="Abrir menú"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+          {/* Selector idioma compacto */}
           <Select value={language} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-[110px] text-xs flex-shrink-0">
-              <Globe className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+            <SelectTrigger className="h-8 w-[90px] text-xs flex-shrink-0">
+              <Globe className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -663,108 +653,200 @@ export default function Home() {
               ))}
             </SelectContent>
           </Select>
-          <div className="h-6 w-px bg-border mx-1 flex-shrink-0" />
-          <button
-            onClick={() => {
-              setView(view === "categories" ? "home" : "categories");
-              setActiveQuery("");
-              setCategory("");
-            }}
-            className={`flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
-              view === "categories" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-            }`}
-            aria-label="Categorías"
-          >
-            <Grid3x3 className="w-4 h-4" />
-            <span>Categorías</span>
-          </button>
-          <button
-            onClick={() => setView(view === "history" ? "home" : "history")}
-            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
-              view === "history" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-            }`}
-            aria-label="Historial"
-          >
-            <History className="w-4 h-4" />
-            <span>Historial</span>
-            {history.length > 0 && (
-              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-                {history.length > 9 ? "9+" : history.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setView(view === "favorites" ? "home" : "favorites")}
-            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
-              view === "favorites" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-            }`}
-            aria-label="Favoritos"
-          >
-            <Bookmark className="w-4 h-4" />
-            <span>Favoritos</span>
-            {favorites.length > 0 && (
-              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-                {favorites.length > 9 ? "9+" : favorites.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={toggleDark}
-            className="flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 hover:bg-secondary transition-colors"
-            aria-label="Cambiar tema"
-          >
-            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            <span>{dark ? "Claro" : "Oscuro"}</span>
-          </button>
-          <button
-            onClick={toggleLike}
-            className={`relative flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
-              liked ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-            }`}
-            aria-label="Me gusta"
-          >
-            <ThumbsUp className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
-            <span>Me gusta</span>
-            {likeCount > 0 && (
-              <span className="bg-accent text-accent-foreground text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-                {likeCount > 99 ? "99+" : likeCount}
-              </span>
-            )}
-          </button>
-          {installPromptEvent && !isInstalled && (
+          {/* Categorías scrollables siempre visibles */}
+          {CATEGORIES.map((c) => (
             <button
-              onClick={handleInstallClick}
-              className="flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-semibold"
-              aria-label="Instalar app"
+              key={c.value}
+              onClick={() => onCategoryClick(c.value)}
+              className={`flex items-center gap-1 px-2.5 h-8 rounded-md text-xs flex-shrink-0 transition-colors ${
+                category === c.value ? "bg-primary text-primary-foreground" : "hover:bg-secondary bg-card border border-border"
+              }`}
             >
-              <DownloadCloud className="w-4 h-4" />
-              <span>Instalar</span>
+              <span>{c.icon}</span>
+              <span>{c.label}</span>
             </button>
-          )}
+          ))}
         </div>
 
-        {/* Filtros por fuente (solo en resultados) */}
-        {view === "results" && (
+        {/* Menú hamburguesa móvil (overlay) */}
+        {mobileMenuOpen && (
+          <div
+            className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <div
+              className="absolute top-0 right-0 bottom-0 w-72 max-w-[80vw] bg-background border-l border-border shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h3 className="font-serif text-lg font-semibold">Menú</h3>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-8 h-8 rounded-md hover:bg-secondary flex items-center justify-center"
+                  aria-label="Cerrar menú"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto scroll-elegant p-3 space-y-1">
+                {/* Inicio */}
+                <button
+                  onClick={() => {
+                    setView("home");
+                    setActiveQuery("");
+                    setCategory("");
+                    setQuery("");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                    view === "home" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                  }`}
+                >
+                  <HomeIcon className="w-4 h-4" />
+                  <span>Inicio</span>
+                </button>
+
+                {/* Categorías */}
+                <button
+                  onClick={() => {
+                    setView("categories");
+                    setActiveQuery("");
+                    setCategory("");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                    view === "categories" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                  }`}
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                  <span>Categorías</span>
+                </button>
+
+                {/* Historial */}
+                <button
+                  onClick={() => {
+                    setView("history");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                    view === "history" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <History className="w-4 h-4" />
+                    <span>Historial</span>
+                  </div>
+                  {history.length > 0 && (
+                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                      {history.length > 9 ? "9+" : history.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Favoritos */}
+                <button
+                  onClick={() => {
+                    setView("favorites");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                    view === "favorites" ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Bookmark className="w-4 h-4" />
+                    <span>Favoritos</span>
+                  </div>
+                  {favorites.length > 0 && (
+                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                      {favorites.length > 9 ? "9+" : favorites.length}
+                    </span>
+                  )}
+                </button>
+
+                <div className="h-px bg-border my-2" />
+
+                {/* Modo oscuro */}
+                <button
+                  onClick={toggleDark}
+                  className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
+                >
+                  {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                  <span>{dark ? "Modo claro" : "Modo oscuro"}</span>
+                </button>
+
+                {/* Me gusta */}
+                <button
+                  onClick={toggleLike}
+                  className={`w-full flex items-center justify-between gap-3 px-3 h-11 rounded-md text-sm transition-colors ${
+                    liked ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <ThumbsUp className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
+                    <span>{liked ? "Te gusta esta app" : "Me gusta"}</span>
+                  </div>
+                  {likeCount > 0 && (
+                    <span className="bg-accent text-accent-foreground text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center">
+                      {likeCount > 99 ? "99+" : likeCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Instalar */}
+                {installPromptEvent && !isInstalled && (
+                  <button
+                    onClick={() => {
+                      handleInstallClick();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm bg-accent text-accent-foreground hover:bg-accent/90 transition-colors font-semibold"
+                  >
+                    <DownloadCloud className="w-4 h-4" />
+                    <span>Instalar app</span>
+                  </button>
+                )}
+
+                <div className="h-px bg-border my-2" />
+
+                {/* Donativo */}
+                <button
+                  onClick={() => {
+                    setShowDonativo(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm hover:bg-secondary transition-colors"
+                >
+                  <Gift className="w-4 h-4 text-accent" />
+                  <span>Donativo</span>
+                </button>
+              </div>
+
+              <div className="p-4 border-t border-border text-center">
+                <p className="font-serif text-sm font-semibold">ELMUBE BOOKS</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Libros libres de dominio público
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Indicador de idioma activo (solo en resultados, si hay filtro) */}
+        {view === "results" && language !== "all" && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground mr-1 flex-shrink-0">Fuentes:</span>
-              <Tabs value={source} onValueChange={onSourceChange}>
-                <TabsList className="h-8 flex flex-wrap">
-                  <TabsTrigger value="all" className="text-xs h-7 px-3">Todas</TabsTrigger>
-                  <TabsTrigger value="gutenberg" className="text-xs h-7 px-3">Gutenberg</TabsTrigger>
-                  <TabsTrigger value="openlibrary" className="text-xs h-7 px-3">Open Library</TabsTrigger>
-                  <TabsTrigger value="standardebooks" className="text-xs h-7 px-3">Standard</TabsTrigger>
-                  <TabsTrigger value="archive" className="text-xs h-7 px-3">Archive</TabsTrigger>
-                  <TabsTrigger value="wikisource" className="text-xs h-7 px-3">Wikisource</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              {language !== "all" && (
-                <Badge variant="outline" className="text-xs">
-                  <Globe className="w-3 h-3 mr-1" />
-                  {LANGUAGES.find((l) => l.value === language)?.label}
-                </Badge>
-              )}
+              <Badge variant="outline" className="text-xs">
+                <Globe className="w-3 h-3 mr-1" />
+                {LANGUAGES.find((l) => l.value === language)?.label}
+              </Badge>
+              <button
+                onClick={() => onLanguageChange("all")}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Quitar filtro
+              </button>
             </div>
           </div>
         )}
@@ -788,24 +870,26 @@ export default function Home() {
               Descarga en EPUB, PDF, TXT, HTML o Kindle — totalmente gratis y legal.
             </p>
 
-            <div className="flex flex-wrap justify-center gap-2 mb-12">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onSuggestion(s)}
-                  className="px-3 py-1.5 text-sm rounded-full border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            {/* Categorías destacadas */}
+            {/* Categorías destacadas - carrusel horizontal en móvil, grid en desktop */}
             <div className="mb-12">
               <h3 className="font-serif text-xl font-semibold mb-4 flex items-center justify-center gap-2">
                 <Tag className="w-5 h-5" /> Explora por categoría
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
+              {/* Móvil: carrusel horizontal scrollable */}
+              <div className="sm:hidden flex gap-2 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => onCategoryClick(c.value)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 transition-colors text-left flex-shrink-0 whitespace-nowrap"
+                  >
+                    <span className="text-lg">{c.icon}</span>
+                    <span className="text-sm font-medium">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Desktop: grid */}
+              <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
                 {CATEGORIES.map((c) => (
                   <button
                     key={c.value}
@@ -843,9 +927,24 @@ export default function Home() {
       {/* ===== Vista de categorías (grid grande) ===== */}
       {view === "categories" && (
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-          <h2 className="font-serif text-2xl font-bold mb-2">Explora por categoría</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={() => {
+                setView("home");
+                setActiveQuery("");
+                setCategory("");
+                setQuery("");
+              }}
+              className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-sm flex-shrink-0"
+              aria-label="Volver al inicio"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </button>
+            <h2 className="font-serif text-2xl font-bold">Explora por categoría</h2>
+          </div>
           <p className="text-muted-foreground text-sm mb-6">
-            Descubre libros agrupados por género literario.
+            Descubre libros agrupados por género literario. {CATEGORIES.length} categorías disponibles.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {CATEGORIES.map((c) => (
@@ -868,19 +967,37 @@ export default function Home() {
       {/* ===== Resultados / Favoritos / Historial ===== */}
       {(view === "results" || view === "favorites" || view === "history") && (
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 className="font-serif text-xl font-semibold flex items-center gap-2">
-              {view === "favorites" && <Bookmark className="w-5 h-5" />}
-              {view === "history" && <History className="w-5 h-5" />}
-              {getViewTitle()}
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
+          {/* Barra superior con botón volver + título + total */}
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => {
+                  setView("home");
+                  setActiveQuery("");
+                  setCategory("");
+                  setQuery("");
+                  setBooks([]);
+                }}
+                className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-sm flex-shrink-0"
+                aria-label="Volver al inicio"
+                title="Volver al inicio"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Volver</span>
+              </button>
+              <h2 className="font-serif text-lg sm:text-xl font-semibold flex items-center gap-2 min-w-0 truncate">
+                {view === "favorites" && <Bookmark className="w-5 h-5 flex-shrink-0" />}
+                {view === "history" && <History className="w-5 h-5 flex-shrink-0" />}
+                <span className="truncate">{getViewTitle()}</span>
+              </h2>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Badge variant="secondary" className="text-xs">
                 {displayed.length} {displayed.length === 1 ? "libro" : "libros"}
-              </span>
+              </Badge>
               {view === "history" && history.length > 0 && (
                 <Button variant="outline" size="sm" onClick={clearHistory}>
-                  <X className="w-3.5 h-3.5 mr-1.5" /> Borrar historial
+                  <X className="w-3.5 h-3.5 mr-1.5" /> Borrar
                 </Button>
               )}
             </div>
@@ -980,17 +1097,33 @@ export default function Home() {
           )}
 
           {!loading && view !== "history" && displayed.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {displayed.map((b) => (
-                <BookCard
-                  key={b.id}
-                  book={b}
-                  fav={isFav(b.id)}
-                  onToggleFav={() => toggleFav(b)}
-                  onOpen={() => setSelected(b)}
-                />
-              ))}
-            </div>
+            <>
+              {/* Móvil: carrusel horizontal scrollable */}
+              <div className="sm:hidden flex gap-3 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4 snap-x snap-mandatory">
+                {displayed.map((b) => (
+                  <div key={b.id} className="flex-shrink-0 w-32 snap-start">
+                    <BookCard
+                      book={b}
+                      fav={isFav(b.id)}
+                      onToggleFav={() => toggleFav(b)}
+                      onOpen={() => setSelected(b)}
+                    />
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: grid */}
+              <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {displayed.map((b) => (
+                  <BookCard
+                    key={b.id}
+                    book={b}
+                    fav={isFav(b.id)}
+                    onToggleFav={() => toggleFav(b)}
+                    onOpen={() => setSelected(b)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </main>
       )}
