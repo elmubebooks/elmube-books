@@ -21,66 +21,36 @@ export const CATEGORY_MAP: Record<
   string,
   { gutenberg: string; openlibrary: string; standardebooks: string }
 > = {
-  ficcion: {
-    gutenberg: "fiction",
-    openlibrary: "fiction",
-    standardebooks: "fiction",
-  },
-  poesia: {
-    gutenberg: "poetry",
-    openlibrary: "poetry",
-    standardebooks: "poetry",
-  },
-  filosofia: {
-    gutenberg: "philosophy",
-    openlibrary: "philosophy",
-    standardebooks: "philosophy",
-  },
-  teatro: {
-    gutenberg: "drama",
-    openlibrary: "drama",
-    standardebooks: "drama",
-  },
-  historia: {
-    gutenberg: "history",
-    openlibrary: "history",
-    standardebooks: "history",
-  },
-  ciencia: {
-    gutenberg: "science",
-    openlibrary: "science",
-    standardebooks: "science",
-  },
-  aventuras: {
-    gutenberg: "adventure",
-    openlibrary: "adventure",
-    standardebooks: "adventure",
-  },
-  misterio: {
-    gutenberg: "detective",
-    openlibrary: "mystery",
-    standardebooks: "mystery",
-  },
-  romance: {
-    gutenberg: "romance",
-    openlibrary: "romance",
-    standardebooks: "romance",
-  },
-  infantiles: {
-    gutenberg: "children",
-    openlibrary: "juvenile fiction",
-    standardebooks: "children",
-  },
-  religion: {
-    gutenberg: "religion",
-    openlibrary: "religion",
-    standardebooks: "religion",
-  },
-  biografia: {
-    gutenberg: "biography",
-    openlibrary: "biography",
-    standardebooks: "biography",
-  },
+  // Literatura
+  ficcion: { gutenberg: "fiction", openlibrary: "fiction", standardebooks: "fiction" },
+  novela: { gutenberg: "novel", openlibrary: "novel", standardebooks: "fiction" },
+  cuentos: { gutenberg: "short stories", openlibrary: "short stories", standardebooks: "fiction" },
+  poesia: { gutenberg: "poetry", openlibrary: "poetry", standardebooks: "poetry" },
+  teatro: { gutenberg: "drama", openlibrary: "drama", standardebooks: "drama" },
+  ensayo: { gutenberg: "essays", openlibrary: "essays", standardebooks: "essays" },
+  // Géneros narrativos
+  aventuras: { gutenberg: "adventure", openlibrary: "adventure", standardebooks: "adventure" },
+  misterio: { gutenberg: "detective", openlibrary: "mystery", standardebooks: "mystery" },
+  romance: { gutenberg: "romance", openlibrary: "romance", standardebooks: "romance" },
+  terror: { gutenberg: "horror", openlibrary: "horror", standardebooks: "horror" },
+  ciencia_ficcion: { gutenberg: "science fiction", openlibrary: "science fiction", standardebooks: "science fiction" },
+  fantasia: { gutenberg: "fantasy", openlibrary: "fantasy", standardebooks: "fantasy" },
+  humor: { gutenberg: "humor", openlibrary: "humor", standardebooks: "humor" },
+  // Conocimiento
+  filosofia: { gutenberg: "philosophy", openlibrary: "philosophy", standardebooks: "philosophy" },
+  historia: { gutenberg: "history", openlibrary: "history", standardebooks: "history" },
+  ciencia: { gutenberg: "science", openlibrary: "science", standardebooks: "science" },
+  religion: { gutenberg: "religion", openlibrary: "religion", standardebooks: "religion" },
+  biografia: { gutenberg: "biography", openlibrary: "biography", standardebooks: "biography" },
+  politica: { gutenberg: "politics", openlibrary: "politics", standardebooks: "politics" },
+  economia: { gutenberg: "economics", openlibrary: "economics", standardebooks: "economics" },
+  // Especial
+  infantiles: { gutenberg: "children", openlibrary: "juvenile fiction", standardebooks: "children" },
+  juvenil: { gutenberg: "young adult", openlibrary: "young adult fiction", standardebooks: "young adult" },
+  viajes: { gutenberg: "travel", openlibrary: "travel", standardebooks: "travel" },
+  cocina: { gutenberg: "cooking", openlibrary: "cookery", standardebooks: "cooking" },
+  musica: { gutenberg: "music", openlibrary: "music", standardebooks: "music" },
+  arte: { gutenberg: "art", openlibrary: "art", standardebooks: "art" },
 };
 
 /* Mapeo idioma UI → código por fuente */

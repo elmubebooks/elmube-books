@@ -181,18 +181,36 @@ const LANGUAGES = [
 ];
 
 const CATEGORIES = [
+  // Literatura
   { value: "ficcion", label: "Ficción", icon: "📖" },
+  { value: "novela", label: "Novela", icon: "📚" },
+  { value: "cuentos", label: "Cuentos", icon: "✍️" },
   { value: "poesia", label: "Poesía", icon: "✒️" },
-  { value: "filosofia", label: "Filosofía", icon: "🧠" },
   { value: "teatro", label: "Teatro", icon: "🎭" },
-  { value: "historia", label: "Historia", icon: "🏛️" },
-  { value: "ciencia", label: "Ciencia", icon: "🔬" },
+  { value: "ensayo", label: "Ensayo", icon: "📝" },
+  // Géneros narrativos
   { value: "aventuras", label: "Aventuras", icon: "🗺️" },
   { value: "misterio", label: "Misterio", icon: "🔍" },
   { value: "romance", label: "Romance", icon: "❤️" },
-  { value: "infantiles", label: "Infantil", icon: "🧸" },
+  { value: "terror", label: "Terror", icon: "💀" },
+  { value: "ciencia_ficcion", label: "Ciencia Ficción", icon: "🚀" },
+  { value: "fantasia", label: "Fantasía", icon: "🐉" },
+  { value: "humor", label: "Humor", icon: "😄" },
+  // Conocimiento
+  { value: "filosofia", label: "Filosofía", icon: "🧠" },
+  { value: "historia", label: "Historia", icon: "🏛️" },
+  { value: "ciencia", label: "Ciencia", icon: "🔬" },
   { value: "religion", label: "Religión", icon: "🕊️" },
   { value: "biografia", label: "Biografía", icon: "👤" },
+  { value: "politica", label: "Política", icon: "⚖️" },
+  { value: "economia", label: "Economía", icon: "💰" },
+  // Especial
+  { value: "infantiles", label: "Infantil", icon: "🧸" },
+  { value: "juvenil", label: "Juvenil", icon: "🎯" },
+  { value: "viajes", label: "Viajes", icon: "🧳" },
+  { value: "cocina", label: "Cocina", icon: "🍳" },
+  { value: "musica", label: "Música", icon: "🎵" },
+  { value: "arte", label: "Arte", icon: "🎨" },
 ];
 
 type View = "home" | "results" | "favorites" | "history" | "categories";
@@ -226,6 +244,9 @@ export default function Home() {
   const [commentSending, setCommentSending] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [homeCarousels, setHomeCarousels] = useState<Record<string, Book[]>>({});
+  const [homeCarouselsLoading, setHomeCarouselsLoading] = useState(true);
+  const [booksDropdownOpen, setBooksDropdownOpen] = useState(false);
 
   /* ----- PWA: detectar posibilidad de instalación ----- */
   useEffect(() => {
@@ -261,6 +282,68 @@ export default function Home() {
     }
     setInstallPromptEvent(null);
   };
+
+  /* ----- Cargar carruseles de la home (libros destacados por categoría) ----- */
+  // Carga 6 libros de cada categoría en paralelo al iniciar la app.
+  // Solo se hace una vez. Si una categoría falla, se omite (no rompe la home).
+  useEffect(() => {
+    let cancelled = false;
+    const loadHomeCarousels = async () => {
+      setHomeCarouselsLoading(true);
+      // Seleccionamos categorías destacadas para no saturar
+      const featuredCats = [
+        "ficcion", "novela", "cuentos", "poesia", "aventuras",
+        "misterio", "infantiles", "filosofia", "historia", "romance",
+      ];
+      const results: Record<string, Book[]> = {};
+
+      // Para cada categoría: primero intentar con español, luego complementar con todos
+      await Promise.all(
+        featuredCats.map(async (cat) => {
+          try {
+            // 1. Buscar primero en español (prioridad para México/Latinoamérica)
+            const resEs = await fetch(`/api/search?category=${cat}&language=es&limit=8&source=all`);
+            let books: Book[] = [];
+            if (resEs.ok) {
+              const dataEs = await resEs.json();
+              books = dataEs.books || [];
+            }
+            // 2. Si hay pocos en español, complementar con todos los idiomas
+            if (books.length < 5) {
+              const resAll = await fetch(`/api/search?category=${cat}&limit=8&source=all`);
+              if (resAll.ok) {
+                const dataAll = await resAll.json();
+                const allBooks = dataAll.books || [];
+                // Mezclar: primero los de español, luego el resto sin duplicados
+                const seen = new Set(books.map((b) => b.id));
+                for (const b of allBooks) {
+                  if (!seen.has(b.id)) {
+                    books.push(b);
+                    seen.add(b.id);
+                  }
+                  if (books.length >= 8) break;
+                }
+              }
+            }
+            // Solo incluir si hay al menos 3 libros
+            if (books.length >= 3) {
+              results[cat] = books.slice(0, 8);
+            }
+          } catch {
+            // Silenciar error: simplemente no se muestra ese carrusel
+          }
+        })
+      );
+      if (!cancelled) {
+        setHomeCarousels(results);
+        setHomeCarouselsLoading(false);
+      }
+    };
+    loadHomeCarousels();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* ----- Enviar comentario por correo ----- */
   const sendComment = (e: React.FormEvent) => {
@@ -544,6 +627,49 @@ export default function Home() {
             </div>
           </button>
 
+          {/* Botón "Libros" con dropdown de categorías (desktop) */}
+          <div className="relative hidden md:block flex-shrink-0">
+            <button
+              onClick={() => setBooksDropdownOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-3 h-10 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-sm font-medium"
+              aria-label="Ver categorías de libros"
+              aria-expanded={booksDropdownOpen}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Libros</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${booksDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {booksDropdownOpen && (
+              <>
+                {/* Overlay para cerrar al hacer clic fuera */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setBooksDropdownOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 w-80 max-h-[70vh] overflow-y-auto scroll-elegant bg-popover border border-border rounded-md shadow-xl z-50 p-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+                    Explorar por categoría
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => {
+                          onCategoryClick(c.value);
+                          setBooksDropdownOpen(false);
+                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-secondary transition-colors text-left"
+                      >
+                        <span className="text-base">{c.icon}</span>
+                        <span className="truncate">{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit} className="flex-1 flex gap-2 max-w-2xl mx-auto">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -639,6 +765,47 @@ export default function Home() {
           >
             <Menu className="w-4 h-4" />
           </button>
+          {/* Botón Libros (dropdown categorías en móvil) */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setBooksDropdownOpen((v) => !v)}
+              className="flex items-center gap-1 px-2.5 h-8 rounded-md border border-border bg-card hover:bg-secondary transition-colors text-xs font-medium"
+              aria-label="Ver categorías de libros"
+              aria-expanded={booksDropdownOpen}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Libros</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${booksDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {booksDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setBooksDropdownOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-1 w-72 max-h-[60vh] overflow-y-auto scroll-elegant bg-popover border border-border rounded-md shadow-xl z-50 p-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+                    Explorar por categoría
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => {
+                          onCategoryClick(c.value);
+                          setBooksDropdownOpen(false);
+                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-secondary transition-colors text-left"
+                      >
+                        <span className="text-base">{c.icon}</span>
+                        <span className="truncate">{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           {/* Selector idioma */}
           <Select value={language} onValueChange={onLanguageChange}>
             <SelectTrigger className="h-8 w-[115px] text-xs flex-shrink-0">
@@ -687,26 +854,66 @@ export default function Home() {
         )}
       </header>
 
-      {/* ===== Home ===== */}
+      {/* ===== Home con carruseles tipo Netflix ===== */}
       {view === "home" && (
-        <section className="flex-1 flex flex-col items-center justify-center px-4 py-12 text-center">
-          <div className="max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-6">
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+          {/* Hero compacto */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs mb-4">
               <Sparkles className="w-3.5 h-3.5" />
               {">"} 70.000 libros libres de descarga
             </div>
-            <h2 className="font-serif text-4xl sm:text-5xl font-bold leading-tight mb-4">
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold leading-tight mb-3">
               Busca, descubre y descarga
               <br />
               <span className="text-primary">libros de dominio público</span>
             </h2>
-            <p className="text-muted-foreground text-base sm:text-lg mb-12 max-w-xl mx-auto">
-              Una sola búsqueda en Project Gutenberg, Open Library y Standard Ebooks.
-              Descarga en EPUB, PDF, TXT, HTML o Kindle — totalmente gratis y legal.
+            <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
+              Una sola búsqueda en 5 fuentes. Descarga en EPUB, PDF, TXT, HTML o Kindle — gratis y legal.
             </p>
-
           </div>
-        </section>
+
+          {/* Carruseles por categoría */}
+          {homeCarouselsLoading ? (
+            <div className="space-y-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <Skeleton className="h-6 w-48 mb-3" />
+                  <div className="flex gap-3 overflow-hidden">
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <Skeleton key={j} className="w-28 h-44 flex-shrink-0 rounded-md" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : Object.keys(homeCarousels).length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                No se pudieron cargar los libros destacados. Intenta buscar o explorar categorías.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {Object.entries(homeCarousels).map(([catKey, books]) => {
+                const cat = CATEGORIES.find((c) => c.value === catKey);
+                if (!cat || books.length === 0) return null;
+                return (
+                  <CategoryCarousel
+                    key={catKey}
+                    icon={cat.icon}
+                    label={cat.label}
+                    books={books}
+                    isFav={isFav}
+                    onToggleFav={toggleFav}
+                    onOpen={(b) => setSelected(b)}
+                    onSeeMore={() => onCategoryClick(catKey)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </main>
       )}
 
       {/* ===== Vista de categorías (grid grande) ===== */}
@@ -1486,6 +1693,61 @@ function FeatureCard({
       <h3 className="font-serif font-semibold text-sm mb-1">{title}</h3>
       <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
     </Card>
+  );
+}
+
+/* ====== Carrusel de categoría (tipo Netflix) ====== */
+function CategoryCarousel({
+  icon,
+  label,
+  books,
+  isFav,
+  onToggleFav,
+  onOpen,
+  onSeeMore,
+}: {
+  icon: string;
+  label: string;
+  books: Book[];
+  isFav: (id: string) => boolean;
+  onToggleFav: (book: Book) => void;
+  onOpen: (book: Book) => void;
+  onSeeMore: () => void;
+}) {
+  return (
+    <section>
+      {/* Header del carrusel */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h3 className="font-serif text-lg sm:text-xl font-semibold flex items-center gap-2">
+          <span className="text-xl">{icon}</span>
+          <span>{label}</span>
+        </h3>
+        <button
+          onClick={onSeeMore}
+          className="text-xs text-primary hover:underline flex items-center gap-1 flex-shrink-0"
+        >
+          Ver más
+          <ChevronDown className="w-3 h-3 -rotate-90" />
+        </button>
+      </div>
+
+      {/* Carrusel horizontal scrollable */}
+      <div className="flex gap-3 overflow-x-auto scroll-elegant pb-2 -mx-4 px-4 sm:mx-0 sm:px-1 snap-x snap-mandatory">
+        {books.map((b) => (
+          <div
+            key={b.id}
+            className="flex-shrink-0 w-28 sm:w-32 snap-start"
+          >
+            <BookCard
+              book={b}
+              fav={isFav(b.id)}
+              onToggleFav={() => onToggleFav(b)}
+              onOpen={() => onOpen(b)}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
