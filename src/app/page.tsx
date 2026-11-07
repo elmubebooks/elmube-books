@@ -234,6 +234,269 @@ const CATEGORIES = [
   { value: "arte", label: "Arte", icon: "🎨" },
 ];
 
+/* ====== Libros para leer al menos una vez en la vida ======
+   Curaduría de obras maestras universales de dominio público.
+   Todos disponibles en Project Gutenberg (formatos HTML/EPUB/TXT).
+   La mayoría en español; algunos clásicos rusos/alemanes en traducción al inglés
+   cuando no hay versión en español disponible en Gutenberg. */
+const MUST_READ_BOOKS: Book[] = [
+  {
+    id: "must-quijote",
+    title: "Don Quijote de la Mancha",
+    author: "Miguel de Cervantes Saavedra",
+    year: 1605,
+    language: "es",
+    subjects: ["Novela", "Clásico", "Caballería"],
+    cover: "https://www.gutenberg.org/cache/epub/2000/pg2000.cover.medium.jpg",
+    description: "La obra cumbre de la literatura española. Un hidalgo manchego, enloquecido por los libros de caballería, sale en busca de aventuras junto a su escudero Sancho Panza. Considerada la primera novela moderna.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/2000/pg2000-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/2000.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/2000/pg2000.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/2000/pg2000-images.html",
+  },
+  {
+    id: "must-odisea",
+    title: "La Odisea",
+    author: "Homero",
+    year: -800,
+    language: "en",
+    subjects: ["Clásico", "Epopeya", "Mitología griega"],
+    cover: "https://www.gutenberg.org/cache/epub/1727/pg1727.cover.medium.jpg",
+    description: "El viaje épico de Odiseo de regreso a Ítaca tras la Guerra de Troya. Cíclopes, sirenas, dioses y monstruos en una de las historias fundadoras de la civilización occidental.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/1727/pg1727-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/1727.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/1727/pg1727.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/1727/pg1727-images.html",
+  },
+  {
+    id: "must-iliada",
+    title: "La Ilíada",
+    author: "Homero",
+    year: -800,
+    language: "en",
+    subjects: ["Clásico", "Epopeya", "Guerra de Troya"],
+    cover: "https://www.gutenberg.org/cache/epub/6130/pg6130.cover.medium.jpg",
+    description: "La cólera de Aquiles durante el asedio de Troya. Honor, guerra, amistad y destino en el poema épico que definió la literatura occidental.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/6130/pg6130-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/6130.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/6130/pg6130.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/6130/pg6130-images.html",
+  },
+  {
+    id: "must-divina-comedia",
+    title: "La Divina Comedia",
+    author: "Dante Alighieri",
+    year: 1320,
+    language: "en",
+    subjects: ["Clásico", "Poesía épica", "Religión"],
+    cover: "https://www.gutenberg.org/cache/epub/8800/pg8800.cover.medium.jpg",
+    description: "El viaje de Dante por el Infierno, el Purgatorio y el Paraíso. Un poema monumental que sintetiza la cosmovisión medieval: teología, filosofía, política y amor.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/8800/pg8800-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/8800.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/8800/pg8800.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/8800/pg8800-images.html",
+  },
+  {
+    id: "must-hamlet",
+    title: "Hamlet",
+    author: "William Shakespeare",
+    year: 1603,
+    language: "en",
+    subjects: ["Teatro", "Tragedia", "Clásico"],
+    cover: "https://www.gutenberg.org/cache/epub/1524/pg1524.cover.medium.jpg",
+    description: "El príncipe atormentado por el fantasma de su padre y la venganza. La obra más célebre de Shakespeare: locura, traición, duda existencial y el famoso 'Ser o no ser'.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/1524/pg1524-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/1524.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/1524/pg1524.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/1524/pg1524-images.html",
+  },
+  {
+    id: "must-crimen-castigo",
+    title: "Crimen y castigo",
+    author: "Fiódor Dostoyevski",
+    year: 1866,
+    language: "en",
+    subjects: ["Novela psicológica", "Filosofía", "Rusia"],
+    cover: "https://www.gutenberg.org/cache/epub/2554/pg2554.cover.medium.jpg",
+    description: "Raskólnikov, un estudiante empobrecido, asesina a una anciana usurera para probar su teoría del superhombre. La culpa lo consumirá en una de las novelas psicológicas más grandes de la historia.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/2554/pg2554-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/2554.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/2554/pg2554.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/2554/pg2554-images.html",
+  },
+  {
+    id: "must-guerra-paz",
+    title: "Guerra y paz",
+    author: "León Tolstói",
+    year: 1869,
+    language: "en",
+    subjects: ["Novela histórica", "Rusia", "Napoleón"],
+    cover: "https://www.gutenberg.org/cache/epub/2600/pg2600.cover.medium.jpg",
+    description: "Cinco familias aristocráticas rusas durante las guerras napoleónicas. Amor, guerra, filosofía de la historia y la búsqueda de sentido en una novela monumental.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/2600/pg2600-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/2600.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/2600/pg2600.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/2600/pg2600-images.html",
+  },
+  {
+    id: "must-orgullo-prejuicio",
+    title: "Orgullo y prejuicio",
+    author: "Jane Austen",
+    year: 1813,
+    language: "en",
+    subjects: ["Novela", "Romance", "Costumbrista"],
+    cover: "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+    description: "Elizabeth Bennet y el orgulloso Sr. Darcy en una de las historias de amor más queridas de la literatura. Sátira social, ingenio y observación de la Inglaterra rural.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/1342/pg1342-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/1342.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/1342/pg1342.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/1342/pg1342-images.html",
+  },
+  {
+    id: "must-frankenstein",
+    title: "Frankenstein o el moderno Prometeo",
+    author: "Mary Wollstonecraft Shelley",
+    year: 1818,
+    language: "en",
+    subjects: ["Novela gótica", "Ciencia ficción", "Terror"],
+    cover: "https://www.gutenberg.org/cache/epub/84/pg84.cover.medium.jpg",
+    description: "El joven científico Victor Frankenstein crea vida a partir de materia muerta, pero abandona a su criatura. La primera novela de ciencia ficción y un mito moderno sobre la responsabilidad.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/84/pg84-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/84.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/84/pg84.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/84/pg84-images.html",
+  },
+  {
+    id: "must-miserables",
+    title: "Los miserables",
+    author: "Victor Hugo",
+    year: 1862,
+    language: "en",
+    subjects: ["Novela social", "Francia", "Justicia"],
+    cover: "https://www.gutenberg.org/cache/epub/135/pg135.cover.medium.jpg",
+    description: "Jean Valjean, perseguido durante décadas por el inspector Javert por haber robado pan. Redención, justicia social y amor en la Francia del siglo XIX.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/135/pg135-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/135.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/135/pg135.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/135/pg135-images.html",
+  },
+  {
+    id: "must-dracula",
+    title: "Drácula",
+    author: "Bram Stoker",
+    year: 1897,
+    language: "en",
+    subjects: ["Novela gótica", "Terror", "Epistolar"],
+    cover: "https://www.gutenberg.org/cache/epub/345/pg345.cover.medium.jpg",
+    description: "El Conde Drácula se traslada de Transilvania a Inglaterra. Diarios, cartas y recortes de prensa construyen la novela que fundó el mito moderno del vampiro.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/345/pg345-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/345.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/345/pg345.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/345/pg345-images.html",
+  },
+  {
+    id: "must-alicia",
+    title: "Alicia en el País de las Maravillas",
+    author: "Lewis Carroll",
+    year: 1865,
+    language: "en",
+    subjects: ["Literatura infantil", "Fantasía", "Sátira"],
+    cover: "https://www.gutenberg.org/cache/epub/11/pg11.cover.medium.jpg",
+    description: "Alicia cae por la madriguera del conejo y llega a un mundo absurdo y maravilloso. El Sombrerero, el Gato de Cheshire y la Reina de Corazones en un clásico para todas las edades.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/11/pg11-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/11.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/11/pg11.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/11/pg11-images.html",
+  },
+  {
+    id: "must-moby-dick",
+    title: "Moby Dick",
+    author: "Herman Melville",
+    year: 1851,
+    language: "en",
+    subjects: ["Novela", "Aventuras", "Marítima"],
+    cover: "https://www.gutenberg.org/cache/epub/2701/pg2701.cover.medium.jpg",
+    description: "El capitán Ahab obsesivamente persigue a la ballena blanca que le arrancó la pierna. Una meditación épica sobre el bien, el mal y la obsesión en el ballenero Pequod.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/2701/pg2701-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/2701.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/2701/pg2701.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/2701/pg2701-images.html",
+  },
+  {
+    id: "must-sherlock",
+    title: "Las aventuras de Sherlock Holmes",
+    author: "Arthur Conan Doyle",
+    year: 1892,
+    language: "en",
+    subjects: ["Misterio", "Relatos", "Detective"],
+    cover: "https://www.gutenberg.org/cache/epub/1661/pg1661.cover.medium.jpg",
+    description: "Doce relatos del detective más famoso del mundo. Holmes y Watson resuelven crímenes imposibles con lógica pura. Incluye 'Escándalo en Bohemia' y 'La banda de lunares'.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/1661/pg1661-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/1661.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/1661/pg1661.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/1661/pg1661-images.html",
+  },
+  {
+    id: "must-metamorfosis",
+    title: "La metamorfosis",
+    author: "Franz Kafka",
+    year: 1915,
+    language: "en",
+    subjects: ["Relato", "Absurdo", "Filosofía"],
+    cover: "https://www.gutenberg.org/cache/epub/5200/pg5200.cover.medium.jpg",
+    description: "Gregor Samsa despierta una mañana convertido en insecto. La alienación, la culpa familiar y lo absurdo de la existencia en el relato más célebre de Kafka.",
+    source: "gutenberg",
+    downloads: [
+      { label: "HTML", url: "https://www.gutenberg.org/cache/epub/5200/pg5200-images.html" },
+      { label: "EPUB", url: "https://www.gutenberg.org/ebooks/5200.epub.images" },
+      { label: "TXT", url: "https://www.gutenberg.org/cache/epub/5200/pg5200.txt" },
+    ],
+    previewUrl: "https://www.gutenberg.org/cache/epub/5200/pg5200-images.html",
+  },
+];
+
 // Autores cuyas obras SÍ son dominio público, organizados por país
 // Incluye escritores de la época colonial, independencia, romanticismo y modernistas
 // NOTA: García Márquez (†2014), Vargas Llosa (vivo), Borges (†1986) NO son dominio público aún
@@ -1328,6 +1591,22 @@ export default function Home() {
               })}
             </div>
           </div>
+
+          {/* Carrusel destacado: Libros para leer al menos una vez en la vida */}
+          <CategoryCarousel
+            icon="⭐"
+            label="Debes leer al menos una vez en la vida"
+            books={MUST_READ_BOOKS}
+            isFav={isFav}
+            onToggleFav={toggleFav}
+            onOpen={(b) => setSelected(b)}
+            onSeeMore={() => {
+              setView("results");
+              setActiveQuery("clásicos de la literatura");
+              setQuery("clásicos de la literatura");
+              search("clásicos de la literatura", "all", "all", "");
+            }}
+          />
 
           {/* Carruseles por categoría */}
           {homeCarouselsLoading ? (
