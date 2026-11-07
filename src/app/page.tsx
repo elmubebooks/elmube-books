@@ -78,6 +78,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { SplashScreen } from "@/components/SplashScreen";
 
 interface Book {
   id: string;
@@ -891,6 +892,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* ===== Pantalla de splash (auto-ocultable ~1.5s) ===== */}
+      <SplashScreen />
+
       {/* ===== Header ===== */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
         {/* Fila 1: Logo + Buscador + Idioma (desktop) / Buscador (móvil) */}
@@ -904,9 +908,13 @@ export default function Home() {
             }}
             className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           >
-            <div className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
-              <BookOpen className="w-5 h-5" />
-            </div>
+            <img
+              src="/logo.svg"
+              alt="ELMUBE BOOKS"
+              width={36}
+              height={36}
+              className="w-9 h-9 rounded-md flex-shrink-0"
+            />
             {/* Solo desktop: nombre + subtítulo. En móvil solo el icono para dar espacio al buscador */}
             <div className="hidden lg:block text-left">
               <h1 className="font-serif text-lg font-semibold leading-none">
